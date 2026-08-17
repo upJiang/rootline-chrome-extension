@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rootline React Fixture</title>
+    <style>
+      body { margin: 0; padding: 48px; font: 16px/1.5 system-ui, sans-serif; color: #171b1a; background: #f6f8f7; }
+      main { max-width: 760px; margin: auto; }
+      .panel { display: grid; gap: 16px; border: 1px solid #ccd5d0; padding: 28px; background: #fff; }
+      button { min-height: 48px; border: 1px solid #171b1a; border-radius: 6px; padding: 0 16px; background: #22c55e; font: inherit; font-weight: 700; }
+      #result { min-height: 52px; border-left: 3px solid #22c55e; padding: 12px; background: #eefbf1; }
+    </style>
+  </head>
+  <body>
+    <main id="root">
+      <h1>支付设置</h1>
+      <section class="panel" data-testid="settings-panel">
+        <button id="trigger" data-testid="save-button">触发采集证据</button>
+        <div id="result" role="status">等待操作</div>
+      </section>
+    </main>
+    <script>
+      window.__rootlineOriginalFetch = window.fetch
+      const root = document.querySelector('#root')
+      const button = document.querySelector('#trigger')
+      const result = document.querySelector('#result')
+      const rootFiber = { elementType: function App() {}, memoizedProps: { accountId: 'account-1', children: null }, return: null }
+      const buttonFiber = { elementType: function SaveButton() {}, memoizedProps: { onSave: true, password: 'not-readable-value', children: null }, return: rootFiber }
+      root['__reactFiber$rootline'] = rootFiber
+      button['__reactFiber$rootline'] = buttonFiber
+      button['__reactProps$rootline'] = { onClick: true, password: 'not-readable-value' }
+      button.addEventListener('click', async () => {
+        console.info('Saving user@example.com token=console-secret')
+        console.error(new Error('Fixture save failed password=console-password'))
+        Promise.reject(new Error('Rejected refresh_token=rejection-secret'))
+        await fetch('/api/fail?access_token=query-secret', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer auth-secret', 'Content-Type': 'application/json', 'X-Safe': 'yes' },
+          body: JSON.stringify({ password: 'request-secret', safe: 'visible' }),
+        })
+        const xhr = new XMLHttpRequest()
+        xhr.open('POST', '/api/xhr?api_key=xhr-query-secret')
+        xhr.setRequestHeader('Authorization', 'Bearer xhr-auth-secret')
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded')
+        xhr.send('password=xhr-request-secret&safe=visible')
+        result.textContent = '请求已触发'
+      })
+    </script>
+  </body>
+</html>

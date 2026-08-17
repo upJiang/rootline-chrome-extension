@@ -1,0 +1,52 @@
+{
+  "name": "rootline-chrome-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-chrome.mjs",
+    "dev:chrome": "node scripts/dev-chrome.mjs",
+    "dev:chrome:debug": "ROOTLINE_OPEN_DEVTOOLS=1 ROOTLINE_WXT_DEBUG=1 node scripts/dev-chrome.mjs",
+    "dev:chrome:manual": "ROOTLINE_MANUAL_CHROME=1 node scripts/dev-chrome.mjs",
+    "dev:chrome:manual:restart": "ROOTLINE_MANUAL_CHROME=1 node scripts/dev-chrome.mjs --restart",
+    "dev:chrome:restart": "node scripts/dev-chrome.mjs --restart",
+    "dev:chrome:stop": "node scripts/dev-chrome.mjs --stop",
+    "dev:restart": "node scripts/dev-chrome.mjs --restart",
+    "dev:stop": "node scripts/dev-chrome.mjs --stop",
+    "build": "wxt build -b chrome",
+    "zip": "wxt zip -b chrome",
+    "postinstall": "wxt prepare",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "pnpm build && playwright test",
+    "generate:icons": "node scripts/generate-icons.mjs"
+  },
+  "dependencies": {
+    "@fontsource/fira-code": "^5.2.7",
+    "@fontsource/nunito": "^5.2.8",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@tailwindcss/postcss": "^4.1.10",
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "@wxt-dev/module-react": "^1.1.1",
+    "fake-indexeddb": "^6.0.0",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.5.6",
+    "sharp": "^0.33.5",
+    "tailwindcss": "^4.1.10",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "web-ext": "^10.6.0",
+    "wxt": "0.21.2"
+  },
+  "packageManager": "pnpm@11.21.0"
+}

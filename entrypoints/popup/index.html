@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <title>Rootline - 开始网页采集</title>
+    <meta name="manifest.type" content="action">
+    <style>
+      .rootline-boot-fallback {
+        box-sizing: border-box;
+        width: 380px;
+        min-height: 180px;
+        padding: 24px;
+        color: #31343a;
+        background: #f7f8fa;
+        font: 600 14px/1.6 system-ui, sans-serif;
+      }
+
+      .rootline-boot-fallback span {
+        display: block;
+        margin-top: 8px;
+        color: #6d727c;
+        font-size: 12px;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="rootline-boot-fallback" role="status">
+        Rootline 正在连接本地开发服务
+        <span>如果界面长时间没有出现，请运行 pnpm dev:chrome:restart。</span>
+      </div>
+    </div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

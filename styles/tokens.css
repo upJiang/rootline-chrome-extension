@@ -1,0 +1,54 @@
+/* Hallmark · macrostructure: Utility Workbench · tone: precise · anchor hue: green
+ * pre-emit critique: P5 H5 E4 S5 R5 V4
+ */
+:root {
+  --color-canvas: oklch(0.982 0.004 155);
+  --color-surface: oklch(1 0 0);
+  --color-surface-subtle: oklch(0.965 0.006 155);
+  --color-surface-raised: oklch(0.995 0.002 155);
+  --color-ink: oklch(0.205 0.015 155);
+  --color-ink-muted: oklch(0.47 0.014 155);
+  --color-ink-faint: oklch(0.59 0.012 155);
+  --color-border: oklch(0.88 0.009 155);
+  --color-border-strong: oklch(0.75 0.016 155);
+  --color-accent: oklch(0.73 0.19 145);
+  --color-accent-hover: oklch(0.78 0.18 145);
+  --color-accent-soft: oklch(0.95 0.05 145);
+  --color-accent-ink: oklch(0.24 0.07 145);
+  --color-error: oklch(0.56 0.2 25);
+  --color-error-soft: oklch(0.95 0.035 25);
+  --color-warning: oklch(0.61 0.145 72);
+  --color-warning-soft: oklch(0.96 0.045 82);
+  --color-info: oklch(0.54 0.16 253);
+  --color-info-soft: oklch(0.96 0.03 253);
+  --color-scrim: oklch(0.15 0.01 155 / 0.55);
+  --color-code: oklch(0.245 0.012 155);
+  --color-code-ink: oklch(0.92 0.018 145);
+  --font-body: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --line-tight: 1.25;
+  --line-body: 1.5;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --rule-thin: 1px;
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --shadow-popover: 0 14px 36px oklch(0.2 0.01 155 / 0.14);
+}
