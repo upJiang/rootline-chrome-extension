@@ -84,3 +84,16 @@ pnpm zip
 ```
 
 Playwright 的截图、trace 与临时扩展副本写入 `/tmp`，不会进入仓库。
+
+## Chrome Web Store 发布
+
+商店文案、五张 `1280 × 800` 截图、宣传图、隐私政策、用户协议、权限说明、数据披露、审核备注和发布检查清单统一放在 [`store-assets/`](./store-assets/README.md)。
+
+重新生成正式商店素材：
+
+```bash
+ROOTLINE_SCREENSHOTS=1 pnpm exec playwright test tests/e2e/extension.spec.ts
+pnpm store:assets
+```
+
+正式发布前必须补充真实开发者名称、支持邮箱和公开隐私政策 URL。即使 Rootline 只在本机处理数据，Chrome Web Store 仍要求处理用户数据的扩展提供公开隐私政策。

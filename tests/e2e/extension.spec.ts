@@ -242,7 +242,9 @@ async function annotateElement(
     }
     await page.setViewportSize(originalViewport)
     if (process.env.ROOTLINE_SCREENSHOTS === "1") {
+      await page.setViewportSize({ width: 1280, height: 800 })
       await page.screenshot({ path: "/tmp/rootline-pending-target.png" })
+      await page.setViewportSize(originalViewport)
     }
   }
   await pendingToolbar.locator("button[data-confirm-target]").click()
@@ -283,7 +285,9 @@ async function annotateElement(
     }
     await page.setViewportSize(originalViewport)
     if (process.env.ROOTLINE_SCREENSHOTS === "1") {
+      await page.setViewportSize({ width: 1280, height: 800 })
       await page.screenshot({ path: "/tmp/rootline-annotation-editor.png" })
+      await page.setViewportSize(originalViewport)
     }
   }
   await overlay.locator("textarea[data-actual]").fill(actualResult)
@@ -586,6 +590,10 @@ test("keeps the selected source page without requiring save setup", async () => 
   await expect(popup.getByText("选择文件夹", { exact: true })).toHaveCount(0)
   await expect(popup.getByText("127.0.0.1", { exact: true })).toBeVisible()
   await expect(popup.getByRole("button", { name: "开始标注" })).toBeEnabled()
+  if (process.env.ROOTLINE_SCREENSHOTS === "1") {
+    await popup.setViewportSize({ width: 380, height: 680 })
+    await popup.screenshot({ path: "/tmp/rootline-popup-supported.png", fullPage: true })
+  }
   await popup.close()
 })
 
@@ -760,7 +768,8 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
 
   await capturePage.setViewportSize({ width: 1280, height: 900 })
   if (process.env.ROOTLINE_SCREENSHOTS === "1") {
-    await capturePage.screenshot({ path: "/tmp/rootline-capture-1280.png", fullPage: true })
+    await capturePage.setViewportSize({ width: 1280, height: 800 })
+    await capturePage.screenshot({ path: "/tmp/rootline-capture-1280.png", fullPage: false })
   }
 
   const downloadsBeforeCopy = await capturePage.evaluate(async () => chrome.downloads.search({}))
@@ -798,6 +807,10 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
 
   await capturePage.getByRole("tab", { name: "AI 上下文" }).click()
   await expect(capturePage.getByText("AI 角色与安全边界")).toBeVisible()
+  if (process.env.ROOTLINE_SCREENSHOTS === "1") {
+    await capturePage.setViewportSize({ width: 1280, height: 800 })
+    await capturePage.screenshot({ path: "/tmp/rootline-ai-context-1280.png", fullPage: false })
+  }
 
   const { markdown, json, capture, directoryName, directoryPath, capturePath } = initialExportedFiles
   expect(directoryName).toMatch(/^rootline-capture-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-[a-f0-9]{8}$/)
@@ -824,6 +837,10 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
   await expect(historyPage.getByText(/AI 上下文已复制/)).toBeHidden({ timeout: 4_000 })
   await historyRecord.getByRole("button", { name: "重新导出报告" }).click()
   await expect(historyPage.getByText(/原保存位置重新导出/)).toBeVisible()
+  if (process.env.ROOTLINE_SCREENSHOTS === "1") {
+    await historyPage.setViewportSize({ width: 1280, height: 800 })
+    await historyPage.screenshot({ path: "/tmp/rootline-history-1280.png", fullPage: false })
+  }
   for (const width of [320, 375, 414, 768]) {
     await historyPage.setViewportSize({ width, height: 820 })
     expect(await historyPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width}px history overflow`).toBeLessThanOrEqual(1)
