@@ -89,6 +89,8 @@ Playwright 的截图、trace 与临时扩展副本写入 `/tmp`，不会进入�
 
 商店文案、五张 `1280 × 800` 截图、宣传图、隐私政策、用户协议、权限说明、数据披露、审核备注和发布检查清单统一放在 [`store-assets/`](./store-assets/README.md)。
 
+可直接部署的公开隐私政策页面位于 [`rootline-privacy-policy.html`](./rootline-privacy-policy.html)。隐私政策、权限或数据处理行为变化时，必须同时更新该 HTML 和 `store-assets/privacy-policy.md`。
+
 重新生成正式商店素材：
 
 ```bash

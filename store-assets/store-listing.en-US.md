@@ -8,7 +8,7 @@
 - **Language**: English (United States)
 - **Website**: `[Fill in: product website or project homepage]`
 - **Support URL**: `[Fill in: public support page or issue tracker]`
-- **Support email**: `[Fill in: public support email]`
+- **Support email**: `junfengjiang1@gmail.com`
 
 ## Detailed description
 

@@ -1,9 +1,9 @@
 # Rootline 隐私政策
 
-生效日期：2026 年 8 月 17 日  
-开发者：`[开发者名称]`  
-联系邮箱：`[联系邮箱]`  
-公开地址：`[公开隐私政策 URL]`
+生效日期：2026 年 8 月 18 日  
+开发者：`Rootline 项目维护者`  
+联系邮箱：`junfengjiang1@gmail.com`  
+公开地址：`[发布后填写 HTTPS 隐私政策 URL]`
 
 本隐私政策说明 Rootline Chrome 扩展如何处理用户数据。Rootline 的单一用途是在用户主动操作后采集当前网页的运行态证据，并生成保存在用户本机的调试报告。
 
@@ -97,7 +97,7 @@ Rootline 采用本地保存、权限按需使用、字段脱敏、内容截断�
 
 ## 11. 联系方式
 
-有关本政策或 Rootline 数据处理的问题，请联系：`[联系邮箱]`。
+有关本政策或 Rootline 数据处理的问题，请联系：`junfengjiang1@gmail.com`。
 
 ## Chrome Web Store Limited Use 声明
 
