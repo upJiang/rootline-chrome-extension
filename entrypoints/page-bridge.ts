@@ -3,6 +3,7 @@ import type { ExtensionRequest, ExtensionResponse, RuntimePrepareFinishResponse,
 import { redactUrl } from "../src/lib/redaction"
 import type {
   ConsoleEvidence,
+  CaptureSaveMode,
   NetworkEvidence,
   PageInfo,
   ReactRuntimeHint,
@@ -1364,8 +1365,42 @@ function abortFinish(): void {
   }
   state.shadow?.querySelector<HTMLElement>("[data-workflow]")?.removeAttribute("aria-hidden")
   state.shadow?.querySelector<HTMLElement>("[data-target-layer]")?.removeAttribute("hidden")
+  const progress = state.shadow?.querySelector<HTMLElement>("[data-finish-progress]")
+  if (progress) progress.hidden = true
   syncToolbar()
   syncMarkers()
+}
+
+function showFinishProgress(saveMode: CaptureSaveMode): void {
+  const host = state.host
+  const shadow = state.shadow
+  if (!host || !shadow) return
+  state.finishPrepared = true
+  setSelection(false)
+  host.style.display = "block"
+  host.style.visibility = "visible"
+  shadow.querySelector<HTMLElement>("[data-workflow]")?.removeAttribute("aria-hidden")
+  shadow.querySelector<HTMLElement>("[data-workflow]")?.removeAttribute("hidden")
+  shadow.querySelector<HTMLElement>("[data-complete]")?.setAttribute("hidden", "")
+  const progress = shadow.querySelector<HTMLElement>("[data-finish-progress]")
+  const progressText = shadow.querySelector<HTMLElement>("[data-finish-progress-text]")
+  if (progressText) {
+    progressText.textContent = saveMode === "remote"
+      ? "截图已生成，正在上传到腾讯云 COS…"
+      : "截图已生成，正在保存到浏览器下载目录…"
+  }
+  if (progress) progress.hidden = false
+  const hint = shadow.querySelector<HTMLElement>("[data-panel-hint]")
+  if (hint) hint.textContent = saveMode === "remote"
+    ? "截图已完成，正在等待腾讯云 COS 返回结果。"
+    : "截图已完成，正在写入本机文件。"
+  shadow.querySelectorAll<HTMLButtonElement>("[data-select], [data-mode], [data-undo], [data-clear], [data-cancel], [data-finish]")
+    .forEach((button) => { button.disabled = true })
+  const finish = shadow.querySelector<HTMLButtonElement>("[data-finish]")
+  if (finish) {
+    finish.dataset.state = "loading"
+    finish.textContent = saveMode === "remote" ? "正在上传证据" : "正在保存证据"
+  }
 }
 
 function commitFinish(): void {
@@ -1395,11 +1430,14 @@ function showComplete(session: RootlineSession): void {
   state.shadow?.querySelector<HTMLElement>("[data-editor]")?.setAttribute("hidden", "")
   updateHighlight(null)
   if (complete) complete.hidden = false
+  const progress = state.shadow?.querySelector<HTMLElement>("[data-finish-progress]")
+  if (progress) progress.hidden = true
   const summary = state.shadow?.querySelector<HTMLElement>("[data-complete-summary]")
   if (summary) summary.textContent = `${session.targets.length} 个元素 · ${session.console.length} 条控制台 · ${session.network.length} 条网络`
   const location = state.shadow?.querySelector<HTMLElement>("[data-complete-location]")
-  if (location) location.textContent = session.localArtifacts?.directoryPath ?? "Chrome 下载目录/Rootline"
-  setFeedback(`本次证据已保存到 ${session.localArtifacts?.directoryPath ?? "Chrome 下载目录/Rootline"}。`, "success")
+  const destination = session.remoteArtifacts?.reportUrl ?? session.localArtifacts?.directoryPath ?? "Chrome 下载目录/Rootline"
+  if (location) location.textContent = destination
+  setFeedback(session.remoteArtifacts ? "本次证据已上传到你的腾讯云 COS。" : `本次证据已保存到 ${destination}。`, "success")
   state.shadow?.querySelector<HTMLButtonElement>("[data-open-review]")?.focus()
 }
 
@@ -1523,6 +1561,9 @@ function createOverlay(): void {
       .workflow-feedback { position: fixed; right: 16px; bottom: 16px; z-index: 8; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; }
       .feedback[data-tone="success"] { border-color: rgba(22,101,52,.28); background: var(--rl-success-soft); color: var(--rl-success); }
       .feedback[data-tone="error"] { border-color: rgba(180,35,24,.28); background: var(--rl-error-soft); color: var(--rl-error); }
+      .finish-progress { display: flex; align-items: center; gap: 9px; margin-top: 12px; border: 1px solid rgba(15,118,110,.22); border-radius: 10px; padding: 10px 12px; background: #ecfeff; color: #115e59; font-size: 12px; line-height: 1.45; }
+      .finish-progress[hidden] { display: none; }
+      .finish-progress::before { content: ""; width: 13px; height: 13px; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
       .complete { position: fixed; right: 16px; bottom: 16px; z-index: 9; display: grid; width: min(390px, calc(100vw - 32px)); gap: 14px; padding: 16px; border: 1px solid var(--rl-rule); border-radius: 8px; background: #fff; box-shadow: 0 14px 36px rgba(15,23,42,.18); pointer-events: auto; }
       .complete-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .eyebrow { margin: 0 0 3px; color: var(--rl-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
@@ -1587,6 +1628,7 @@ function createOverlay(): void {
         <button class="tool-button" data-clear type="button">清空</button>
         <button class="tool-button" data-cancel type="button">取消</button>
       </div>
+      <div aria-live="polite" class="finish-progress" data-finish-progress hidden><span data-finish-progress-text></span></div>
       <button class="finish-button" data-finish type="button">完成并截图</button>
     </section>
     <section aria-label="元素问题标注" class="editor" data-editor hidden>
@@ -1771,6 +1813,7 @@ function installBridge(): void {
       void prepareFinish().then(sendResponse)
       return true
     }
+    if (message.type === "ROOTLINE_SHOW_FINISH_PROGRESS") showFinishProgress(message.saveMode)
     if (message.type === "ROOTLINE_ABORT_FINISH") abortFinish()
     if (message.type === "ROOTLINE_COMMIT_FINISH") commitFinish()
     if (message.type === "ROOTLINE_SHOW_COMPLETE") showComplete(message.session)

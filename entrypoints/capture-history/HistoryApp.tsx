@@ -11,7 +11,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "../../components/Brand"
 import { Notice } from "../../components/Notice"
 import { listCaptureHistory, openCaptureRecording, readCaptureRecord, reexportCaptureRecord } from "../../src/lib/local-artifacts"
-import { assessReportCompleteness, buildReportMarkdown } from "../../src/lib/report"
+import { reexportRemoteCaptureRecord } from "../../src/lib/remote-artifacts"
+import { assessReportCompleteness, buildRemoteAiContext, buildReportMarkdown } from "../../src/lib/report"
 import type { CaptureHistoryItem } from "../../src/lib/local-artifacts"
 
 type Feedback = { tone: "success" | "error"; message: string }
@@ -90,19 +91,22 @@ export function HistoryApp() {
   }
 
   const openRecord = async (directoryName: string) => {
-    await chrome.tabs.create({ url: chrome.runtime.getURL(`capture.html?record=${encodeURIComponent(directoryName)}`) })
+    const item = records.find((entry) => entry.directoryName === directoryName)
+    await chrome.tabs.create({ url: item?.remoteLocation?.reportUrl ?? chrome.runtime.getURL(`capture.html?record=${encodeURIComponent(directoryName)}`) })
   }
 
   const copyRecord = (directoryName: string) => run(`copy:${directoryName}`, async () => {
     const record = await readCaptureRecord(directoryName)
-    await copyText(buildReportMarkdown(record.report))
-    showFeedback({ tone: "success", message: "AI 上下文已复制，包含本地证据的绝对路径。" })
+    await copyText(record.remoteLocation ? buildRemoteAiContext(record.remoteLocation) : buildReportMarkdown(record.report))
+    showFeedback({ tone: "success", message: record.remoteLocation ? "AI 上下文已复制，复用现有 COS 链接。" : "AI 上下文已复制，包含本地证据的绝对路径。" })
   })
 
   const reexportRecord = (directoryName: string) => run(`export:${directoryName}`, async () => {
-    await reexportCaptureRecord(directoryName)
+    const record = await readCaptureRecord(directoryName)
+    if (record.remoteLocation) await reexportRemoteCaptureRecord(directoryName)
+    else await reexportCaptureRecord(directoryName)
     await refresh()
-    showFeedback({ tone: "success", message: "报告已在原保存位置重新导出。" })
+    showFeedback({ tone: "success", message: record.remoteLocation ? "远程 report.html 已重新导出。" : "报告已在原保存位置重新导出。" })
   })
 
   const openRecording = (directoryName: string) => run(`recording:${directoryName}`, async () => {
@@ -139,20 +143,21 @@ export function HistoryApp() {
 
         {filtered.length === 0 ? <div className="history-empty"><History aria-hidden="true" size={22} /><p>{query ? "没有匹配的采集记录。" : "还没有采集记录。完成一次采集后，Rootline 会在这里保留本地索引。"}</p></div> : null}
         <div className="history-list">
-          {filtered.map((item) => item.state === "ready" && item.report && item.location ? (
+          {filtered.map((item) => item.state === "ready" && item.report && (item.location || item.remoteLocation) ? (
             <article className="history-record" key={item.directoryName}>
               <div className="history-record__main"><div><p className="history-record__title">{item.report.page.title}</p><p className="history-record__url">{item.report.page.url}</p></div><time>{displayTime(item.report.generatedAt)}</time></div>
               <div className="history-record__metrics">
                 {item.report.recording ? <span className="recording-metric" data-missing={item.recordingState === "missing" || undefined}><Video aria-hidden="true" size={13} />{item.recordingState === "available" ? `录屏 ${formatDuration(item.report.recording.durationMs)}` : item.recordingState === "missing" ? "录屏文件缺失" : "录屏位置无法确认"}</span> : <span>标注截图</span>}
+                {item.remoteLocation ? <span data-error={item.markdownState === "missing" || undefined}>{item.markdownState === "available" ? "远程链接可访问" : item.markdownState === "missing" ? "远程链接无法访问" : "远程链接待确认"}</span> : null}
                 <span>{assessReportCompleteness(item.report).score}% 完整度</span>
                 <span>{item.report.targets.length} 个元素</span>
                 <span data-error={item.report.console.some((entry) => entry.level === "error") || undefined}>{item.report.console.filter((entry) => entry.level === "error").length} 个错误</span>
                 <span>{item.report.network.length} 个请求</span>
               </div>
-              <code className="history-record__path">{item.location.directoryPath}</code>
+              <code className="history-record__path">{item.remoteLocation?.reportUrl ?? item.location?.directoryPath}</code>
               <div className="history-record__actions">
                 <button className="rl-button rl-button--primary" onClick={() => void openRecord(item.directoryName)} type="button"><ExternalLink aria-hidden="true" size={16} />查看报告</button>
-                {item.report.recording && typeof item.location.downloadIds?.recording === "number" ? <button className="rl-button" disabled={busy !== null || item.recordingState !== "available"} onClick={() => void openRecording(item.directoryName)} type="button"><Video aria-hidden="true" size={16} />打开录屏</button> : null}
+                {item.report.recording && (item.remoteLocation?.recordingUrl || typeof item.location?.downloadIds?.recording === "number") ? <button className="rl-button" disabled={busy !== null || item.recordingState !== "available"} onClick={() => void openRecording(item.directoryName)} type="button"><Video aria-hidden="true" size={16} />打开录屏</button> : null}
                 <button className="rl-button" disabled={busy !== null} onClick={() => void copyRecord(item.directoryName)} type="button"><ClipboardCopy aria-hidden="true" size={16} />复制 AI 上下文</button>
                 <button className="rl-button" disabled={busy !== null} onClick={() => void reexportRecord(item.directoryName)} type="button"><FileOutput aria-hidden="true" size={16} />重新导出报告</button>
               </div>

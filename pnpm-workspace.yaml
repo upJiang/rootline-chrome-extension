@@ -1,3 +1,4 @@
 allowBuilds:
+  cos-js-sdk-v5: true
   esbuild: true
   sharp: true

@@ -23,6 +23,7 @@ export function summarizeSession(session: RootlineSession): SessionSummary {
     pageUrl: session.page.url,
     startedAt: session.startedAt,
     ...(session.captureMode ? { captureMode: session.captureMode } : {}),
+    ...(session.saveMode ? { saveMode: session.saveMode } : {}),
     targets: session.targets.length,
     consoleEvents: session.console.length,
     errors: session.console.filter((item) => item.level === "error").length,
@@ -30,6 +31,7 @@ export function summarizeSession(session: RootlineSession): SessionSummary {
     ...(session.recordingState ? { recordingState: session.recordingState } : {}),
     ...(session.recording ? { recording: session.recording } : {}),
     ...(session.localArtifacts ? { localArtifacts: session.localArtifacts } : {}),
+    ...(session.remoteArtifacts ? { remoteArtifacts: session.remoteArtifacts } : {}),
   }
 }
 

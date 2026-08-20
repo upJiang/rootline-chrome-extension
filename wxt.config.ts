@@ -42,10 +42,11 @@ export default defineConfig({
   manifest: {
     name: "Rootline",
     short_name: "Rootline",
-    description: "Capture browser runtime evidence and export an AI-ready debugging report.",
+    description: "Capture browser runtime evidence and export a local or Tencent COS debugging report.",
     version: "0.1.0",
     minimum_chrome_version: "120",
     permissions: ["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads"],
+    host_permissions: ["https://*.myqcloud.com/*"],
     action: {
       default_title: "Rootline - 开始网页采集",
       default_popup: "popup.html",

@@ -4,10 +4,13 @@ import {
   BookOpen,
   Camera,
   CircleStop,
+  Cloud,
+  HardDrive,
   History,
   LoaderCircle,
   Play,
   RotateCcw,
+  Settings2,
   Trash2,
   Video,
 } from "lucide-react"
@@ -74,11 +77,34 @@ export function PopupApp() {
       await operation()
       await refresh()
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Rootline 操作失败。")
+      const message = nextError instanceof Error ? nextError.message : "Rootline 操作失败。"
+      setError(message)
     } finally {
       setBusy(null)
     }
   }
+
+  const openCosSettings = async () => {
+    try {
+      await chrome.windows.create({
+        focused: true,
+        height: 860,
+        type: "popup",
+        url: chrome.runtime.getURL("cos-settings.html"),
+        width: 760,
+      })
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "无法打开腾讯云 COS 配置窗口。")
+    }
+  }
+
+  const setSaveMode = (mode: "local" | "remote") => run(`mode:${mode}`, async () => {
+    if (mode === "remote" && !state?.saveConfig?.remote) {
+      await openCosSettings()
+      return
+    }
+    await request({ type: "SET_SAVE_MODE", mode })
+  })
 
   const start = (captureMode: "screenshot" | "video") => run(captureMode === "video" ? "record" : "start", async () => {
     if (typeof state?.tab?.id !== "number") throw new Error("无法确定当前标签页。")
@@ -130,8 +156,10 @@ export function PopupApp() {
 
   const openReview = async () => {
     if (!state?.session) return
-    const url = state.session.localArtifacts
-      ? `capture.html?record=${encodeURIComponent(state.session.localArtifacts.directoryName)}`
+    const remoteRecord = state.session.remoteArtifacts?.objectPrefix.split("/").filter(Boolean).at(-1)
+    const record = state.session.localArtifacts?.directoryName ?? remoteRecord
+    const url = record
+      ? `capture.html?record=${encodeURIComponent(record)}`
       : `capture.html?session=${encodeURIComponent(state.session.id)}`
     await chrome.tabs.create({ url: chrome.runtime.getURL(url) })
     window.close()
@@ -229,7 +257,7 @@ export function PopupApp() {
         </section>
       ) : canReview ? (
         <section className="capture-state">
-          <Notice title="本次证据已生成" tone="success">报告和标注截图已保存到本机，完整路径可在证据页查看。</Notice>
+          <Notice title="本次证据已生成" tone="success">{session.remoteArtifacts ? "报告已上传到你的腾讯云 COS，可直接复制远程链接。" : "报告和标注截图已保存到本机，完整路径可在证据页查看。"}</Notice>
           <button className="rl-button rl-button--primary w-full" onClick={openReview} type="button">
             <ArrowUpRight aria-hidden="true" size={17} />
             查看本次完整证据
@@ -262,16 +290,29 @@ export function PopupApp() {
         </section>
       )}
 
-      <footer className="popup-footer">
-        <span>仅支持本地保存，文件保存位置默认浏览器下载目录</span>
+      <footer className="popup-footer save-mode-footer">
+        <div aria-label="证据保存模式" className="save-mode-tabs" role="tablist">
+          <button aria-selected={(state?.saveConfig?.mode ?? "local") === "local"} disabled={isCapturing || busy !== null} onClick={() => void setSaveMode("local")} role="tab" type="button">
+            <HardDrive aria-hidden="true" size={15} />本地
+          </button>
+          <button aria-selected={state?.saveConfig?.mode === "remote"} disabled={isCapturing || busy !== null} onClick={() => void setSaveMode("remote")} role="tab" type="button">
+            <Cloud aria-hidden="true" size={15} />远程
+          </button>
+        </div>
+        <button aria-label="配置腾讯云 COS" className="rl-button rl-icon-button save-settings" onClick={() => void openCosSettings()} title="远程保存设置" type="button">
+          <Settings2 aria-hidden="true" size={16} />
+        </button>
+        <p>{state?.saveConfig?.mode === "remote" ? `腾讯云 COS · ${state.saveConfig.remote?.bucket ?? "未配置"}` : "文件保存到浏览器下载目录 / Rootline"}</p>
       </footer>
     </main>
   )
 }
 
 async function openSessionReport(session: RootlineSession): Promise<void> {
-  const url = session.localArtifacts
-    ? `capture.html?record=${encodeURIComponent(session.localArtifacts.directoryName)}`
+  const remoteRecord = session.remoteArtifacts?.objectPrefix.split("/").filter(Boolean).at(-1)
+  const record = session.localArtifacts?.directoryName ?? remoteRecord
+  const url = record
+    ? `capture.html?record=${encodeURIComponent(record)}`
     : `capture.html?session=${encodeURIComponent(session.id)}`
   await chrome.tabs.create({ url: chrome.runtime.getURL(url) })
 }

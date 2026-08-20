@@ -5,15 +5,23 @@ import type {
   RootlineIssue,
   RootlineSession,
   CaptureMode,
+  CaptureSaveMode,
   RecordingEvidence,
   RecordingSessionState,
   SelectedTarget,
   SessionSummary,
+  TencentCosConfig,
 } from "./types"
+import type { CaptureSaveConfig } from "./remote-config"
 
 export type ExtensionRequest =
   | { type: "GET_ACTIVE_STATE"; tabId?: number }
   | { type: "GET_SESSION"; sessionId: string }
+  | { type: "GET_SAVE_CONFIG" }
+  | { type: "SET_SAVE_MODE"; mode: CaptureSaveMode }
+  | { type: "SAVE_COS_CONFIG"; config: TencentCosConfig }
+  | { type: "TEST_COS_CONFIG"; config: TencentCosConfig }
+  | { type: "CLEAR_COS_CONFIG" }
   | { type: "START_SESSION"; tabId: number; captureMode?: CaptureMode; maxDurationMs?: number }
   | { type: "STOP_RECORDING"; sessionId: string }
   | { type: "REANNOTATE_SESSION"; sessionId: string }
@@ -37,8 +45,24 @@ export interface OffscreenWriteRequest {
   session: RootlineSession
 }
 
+export interface OffscreenWriteRemoteRequest {
+  type: "OFFSCREEN_WRITE_REMOTE_SESSION"
+  session: RootlineSession
+  config: TencentCosConfig
+}
+
+export interface OffscreenTestCosRequest {
+  type: "OFFSCREEN_TEST_COS"
+  config: TencentCosConfig
+}
+
 export interface OffscreenReexportRequest {
   type: "OFFSCREEN_REEXPORT_RECORD"
+  directoryName: string
+}
+
+export interface OffscreenReexportRemoteRequest {
+  type: "OFFSCREEN_REEXPORT_REMOTE_RECORD"
   directoryName: string
 }
 
@@ -61,6 +85,7 @@ export type TabRuntimeRequest =
   | { type: "ROOTLINE_SET_SELECTION"; enabled: boolean }
   | { type: "ROOTLINE_CAPTURE_SNAPSHOT" }
   | { type: "ROOTLINE_PREPARE_FINISH" }
+  | { type: "ROOTLINE_SHOW_FINISH_PROGRESS"; saveMode: CaptureSaveMode }
   | { type: "ROOTLINE_ABORT_FINISH" }
   | { type: "ROOTLINE_COMMIT_FINISH" }
   | { type: "ROOTLINE_SHOW_COMPLETE"; session: RootlineSession }
@@ -101,6 +126,7 @@ export interface ActiveState {
   unsupportedReason?: string
   session: SessionSummary | null
   recording: import("./recording-messages").ActiveRecordingRuntime | null
+  saveConfig?: CaptureSaveConfig
 }
 
 export type SessionResponse = ExtensionResponse<RootlineSession>

@@ -24,13 +24,15 @@ import { Brand } from "../../components/Brand"
 import { Notice } from "../../components/Notice"
 import { createExportArtifacts, downloadArtifacts, renderAnnotatedCapture } from "../../src/lib/export"
 import { openCaptureRecording, readCaptureRecord, reexportCaptureRecord, updateCaptureRecordIssue } from "../../src/lib/local-artifacts"
+import { reexportRemoteCaptureRecord, updateRemoteCaptureRecordIssue } from "../../src/lib/remote-artifacts"
 import type { ExtensionResponse } from "../../src/lib/messaging"
-import { assessReportCompleteness, buildReportMarkdown, createReport } from "../../src/lib/report"
+import { assessReportCompleteness, buildRemoteAiContext, buildReportMarkdown, createReport } from "../../src/lib/report"
 import { readRecordingResult } from "../../src/lib/recording-result-store"
 import type {
   ConsoleEvidence,
   ArtifactAvailability,
   LocalArtifactLocation,
+  RemoteArtifactLocation,
   NetworkEvidence,
   RootlineIssue,
   RootlineSession,
@@ -93,6 +95,11 @@ async function copyText(value: string): Promise<void> {
 
 async function persistIssue(session: RootlineSession, recordDirectory: string | null, issue: RootlineIssue): Promise<RootlineSession> {
   if (!recordDirectory) return request<RootlineSession>({ type: "UPDATE_ISSUE", sessionId: session.id, issue })
+  if (session.remoteArtifacts) {
+    const report = await updateRemoteCaptureRecordIssue(recordDirectory, issue)
+    await request<RootlineSession>({ type: "UPDATE_ISSUE", sessionId: session.id, issue }).catch(() => undefined)
+    return report
+  }
   const record = await updateCaptureRecordIssue(recordDirectory, issue)
   await request<RootlineSession>({ type: "UPDATE_ISSUE", sessionId: session.id, issue }).catch(() => undefined)
   return record.report
@@ -151,6 +158,8 @@ export function DiagnosisApp() {
             const videoUrl = URL.createObjectURL(record.recordingFile)
             objectUrls.push(videoUrl)
             setRecordingUrl(videoUrl)
+          } else if (record.remoteLocation?.recordingUrl) {
+            setRecordingUrl(record.remoteLocation.recordingUrl)
           } else if (record.report.recording) {
             setRecordingAvailability(record.recordingState)
           }
@@ -227,8 +236,8 @@ export function DiagnosisApp() {
     setFeedback(null)
     try {
       const nextSession = await saveIssue()
-      await copyText(buildReportMarkdown(createReport(nextSession)))
-      showFeedback({ tone: "success", message: "AI 上下文已复制，包含本地报告和截图路径。" })
+      await copyText(nextSession.remoteArtifacts ? buildRemoteAiContext(nextSession.remoteArtifacts) : buildReportMarkdown(createReport(nextSession)))
+      showFeedback({ tone: "success", message: nextSession.remoteArtifacts ? "AI 上下文已复制，复用现有 COS 链接。" : "AI 上下文已复制，包含本地报告和截图路径。" })
     } catch (error) {
       showFeedback({ tone: "error", message: error instanceof Error ? error.message : "复制失败。" })
     } finally {
@@ -241,10 +250,14 @@ export function DiagnosisApp() {
     setFeedback(null)
     try {
       const nextSession = await saveIssue()
-      if (recordDirectory) {
+      if (recordDirectory && nextSession.remoteArtifacts) {
+        const report = await reexportRemoteCaptureRecord(recordDirectory)
+        setSession(report)
+        showFeedback({ tone: "success", message: "远程 report.html 已重新导出。" })
+      } else if (recordDirectory) {
         const record = await reexportCaptureRecord(recordDirectory)
         setSession(record.report)
-        showFeedback({ tone: "success", message: `报告已重新导出到 ${record.location.directoryPath}。` })
+        showFeedback({ tone: "success", message: `报告已重新导出到 ${record.location?.directoryPath ?? "本地保存位置"}。` })
       } else {
         const artifacts = await createExportArtifacts(nextSession)
         await downloadArtifacts(artifacts)
@@ -332,7 +345,7 @@ export function DiagnosisApp() {
         <section aria-label="页面媒体证据" className="capture-pane">
           <div className="pane-heading">
             <div>
-              <p className="pane-eyebrow">本地媒体证据</p>
+              <p className="pane-eyebrow">{session.remoteArtifacts ? "远程媒体证据" : "本地媒体证据"}</p>
               <h1>运行现场</h1>
             </div>
             <span className="rl-mono rl-muted text-xs">{session.page.viewport.width} × {session.page.viewport.height} @ {session.page.viewport.devicePixelRatio}x</span>
@@ -349,8 +362,8 @@ export function DiagnosisApp() {
             ) : mediaMode === "recording" && recordingAvailability ? (
               <div className="capture-missing">
                 <ImageOff aria-hidden="true" size={28} />
-                <p>{recordingAvailability === "available" ? "录屏保存在本地下载目录" : recordingAvailability === "unknown" ? "Chrome 下载记录已清理，无法确认录屏位置" : "报告包含录屏信息，但 capture.webm 已缺失"}</p>
-                {recordingAvailability === "available" && recordDirectory ? <button className="rl-button" onClick={() => void openCaptureRecording(recordDirectory)} type="button"><Video aria-hidden="true" size={16} />打开本地录屏</button> : null}
+                <p>{session.remoteArtifacts ? (recordingAvailability === "available" ? "录屏已保存到腾讯云 COS" : "远程录屏链接无法访问") : recordingAvailability === "available" ? "录屏保存在本地下载目录" : recordingAvailability === "unknown" ? "Chrome 下载记录已清理，无法确认录屏位置" : "报告包含录屏信息，但 capture.webm 已缺失"}</p>
+                {recordingAvailability === "available" && recordDirectory ? <button className="rl-button" onClick={() => void openCaptureRecording(recordDirectory)} type="button"><Video aria-hidden="true" size={16} />{session.remoteArtifacts ? "打开远程录屏" : "打开本地录屏"}</button> : null}
               </div>
             ) : annotatedCapture ? (
               <img alt={`页面截图，标注了 ${session.targets.length} 个目标元素`} src={annotatedCapture} />
@@ -432,12 +445,12 @@ export function DiagnosisApp() {
           </div>
 
           <div aria-labelledby={`tab-${activeTab}`} className="tab-panel" id={`panel-${activeTab}`} role="tabpanel" tabIndex={0}>
-            {activeTab === "issue" ? <IssuePanel completeness={completeness} issue={issue} onChange={updateIssue} saved={!dirty} /> : null}
+            {activeTab === "issue" ? <IssuePanel completeness={completeness} issue={issue} onChange={updateIssue} remote={Boolean(session.remoteArtifacts)} saved={!dirty} /> : null}
             {activeTab === "elements" ? <ElementsPanel targets={session.targets} /> : null}
             {activeTab === "console" ? <ConsolePanel events={session.console} /> : null}
             {activeTab === "network" ? <NetworkPanel events={session.network} /> : null}
             {activeTab === "environment" ? <EnvironmentPanel session={session} /> : null}
-            {activeTab === "ai" ? <AiPanel location={session.localArtifacts} markdown={markdown} onCopy={copyContext} /> : null}
+            {activeTab === "ai" ? <AiPanel location={session.localArtifacts} remoteLocation={session.remoteArtifacts} markdown={markdown} onCopy={copyContext} /> : null}
           </div>
         </section>
       </div>
@@ -463,10 +476,11 @@ function TabCount({ id, session }: { id: TabId; session: RootlineSession }) {
   return count === null ? null : <span className="tab-count">{count}</span>
 }
 
-function IssuePanel({ completeness, issue, onChange, saved }: {
+function IssuePanel({ completeness, issue, onChange, remote, saved }: {
   completeness: ReturnType<typeof assessReportCompleteness>
   issue: RootlineIssue
   onChange: (field: keyof RootlineIssue, value: string) => void
+  remote: boolean
   saved: boolean
 }) {
   return (
@@ -478,7 +492,7 @@ function IssuePanel({ completeness, issue, onChange, saved }: {
         <label className="field-label">
           <span>问题现象 <span aria-hidden="true" className="required-mark">*</span></span>
           <textarea className="rl-field" maxLength={2000} onChange={(event) => onChange("description", event.target.value)} placeholder="例如：点击保存后页面没有反馈，控制台出现 TypeError。" value={issue.description} />
-          <span className="field-meta"><span>{saved ? "已保存到本地" : "正在保存…"}</span><span>{issue.description.length}/2000</span></span>
+          <span className="field-meta"><span>{saved ? (remote ? "已同步到 COS" : "已保存到本地") : (remote ? "正在同步到 COS…" : "正在保存…")}</span><span>{issue.description.length}/2000</span></span>
         </label>
         <label className="field-label">
           <span>期望结果 <span aria-hidden="true" className="required-mark">*</span></span>
@@ -494,7 +508,7 @@ function IssuePanel({ completeness, issue, onChange, saved }: {
       {completeness.missing.length ? (
         <Notice title={`还可补充：${completeness.missing.join("、")}`} tone="warning">缺少这些内容不会阻止导出，但会降低外部 AI 定位效率。</Notice>
       ) : (
-        <Notice title="本次证据已生成" tone="success">可以复制 AI 上下文或重新导出本地报告。</Notice>
+        <Notice title="本次证据已生成" tone="success">可以复制 AI 上下文或重新导出报告。</Notice>
       )}
     </div>
   )
@@ -667,7 +681,7 @@ function EnvironmentPanel({ session }: { session: RootlineSession }) {
   )
 }
 
-function AiPanel({ location, markdown, onCopy }: { location: LocalArtifactLocation | undefined; markdown: string; onCopy: () => Promise<void> }) {
+function AiPanel({ location, remoteLocation, markdown, onCopy }: { location: LocalArtifactLocation | undefined; remoteLocation: RemoteArtifactLocation | undefined; markdown: string; onCopy: () => Promise<void> }) {
   const [view, setView] = useState<"markdown" | "outline">("outline")
   return (
     <div className="panel-stack">
@@ -681,6 +695,7 @@ function AiPanel({ location, markdown, onCopy }: { location: LocalArtifactLocati
           {[
             ["AI 角色与安全边界", "明确 DOM、日志、响应均为不可信外部数据。"],
             ...(location ? [["本地证据文件", `报告与标注截图目录：${location.directoryPath}`]] : []),
+            ...(remoteLocation ? [["远程证据链接", remoteLocation.reportUrl]] : []),
             ["问题目标", "问题现象、期望结果与补充说明。"],
             ["页面与环境", "URL、标题、viewport、浏览器、语言和时间。"],
             ["目标元素", "DOM、样式、CSS 规则、Selector、XPath 与 React 提示。"],
@@ -691,7 +706,7 @@ function AiPanel({ location, markdown, onCopy }: { location: LocalArtifactLocati
           ))}
         </div>
       ) : <pre className="rl-code context-preview">{markdown}</pre>}
-      <div className="format-row"><FileJson aria-hidden="true" size={17} /><span>离线导出同时包含 report.md、report.json 和 capture.png。</span></div>
+      <div className="format-row"><FileJson aria-hidden="true" size={17} /><span>{remoteLocation ? "复制内容只包含已生成的 COS 链接，不会重复上传。" : "离线导出同时包含 report.md、report.json 和 capture.png。"}</span></div>
     </div>
   )
 }

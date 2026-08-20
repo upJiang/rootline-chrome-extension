@@ -124,7 +124,30 @@ export interface ScreenshotEvidence {
 }
 
 export type CaptureMode = "screenshot" | "video"
+export type CaptureSaveMode = "local" | "remote"
 export type RecordingLifecycleStatus = "starting" | "recording" | "stopped" | "failed"
+
+export interface TencentCosConfig {
+  provider: "tencent-cos"
+  bucket: string
+  region: string
+  secretId: string
+  secretKey: string
+  objectPrefix: string
+  publicBaseUrl?: string
+  configuredAt: string
+  verifiedAt?: string
+}
+
+export interface RemoteArtifactLocation {
+  provider: "tencent-cos"
+  objectPrefix: string
+  reportUrl: string
+  recordingUrl?: string
+  reportKey: string
+  recordingKey?: string
+  uploadedAt: string
+}
 
 export interface RecordingSessionState {
   resultId: string
@@ -191,9 +214,11 @@ export interface RootlineSession {
   limits: CaptureLimitSummary
   boundaries: CaptureBoundary[]
   screenshot: ScreenshotEvidence
+  saveMode?: CaptureSaveMode
   recordingState?: RecordingSessionState
   recording?: RecordingEvidence
   localArtifacts?: LocalArtifactLocation
+  remoteArtifacts?: RemoteArtifactLocation
 }
 
 export interface RootlineReportV1 extends RootlineSession {
@@ -209,6 +234,7 @@ export interface SessionSummary {
   pageUrl: string
   startedAt: string
   captureMode?: CaptureMode
+  saveMode?: CaptureSaveMode
   targets: number
   consoleEvents: number
   errors: number
@@ -216,4 +242,5 @@ export interface SessionSummary {
   recordingState?: RecordingSessionState
   recording?: RecordingEvidence
   localArtifacts?: LocalArtifactLocation
+  remoteArtifacts?: RemoteArtifactLocation
 }

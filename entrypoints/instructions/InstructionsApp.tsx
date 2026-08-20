@@ -28,8 +28,8 @@ const steps = [
   ["复现问题", "回到网页重新触发问题，确保相关日志和请求发生在采集窗口内。"],
   ["选择并标注", "使用右下角工具条点击关键元素，就地填写实际表现与期望结果；按 Escape 可退出。"],
   ["继续采集", "保存后继续选择，也可以点击编号重编辑，或使用撤销和清空。"],
-  ["保存到本机", "完成采集后自动写入 Chrome 下载目录下的 Rootline 文件夹。"],
-  ["交给 AI", "点击完成后复制带本地文件路径的 AI 上下文，或查看本次完整证据。"],
+  ["保存位置", "默认写入 Chrome 下载目录下的 Rootline 文件夹，也可以在 Popup 切换到远程并打开独立窗口配置腾讯云 COS。"],
+  ["交给 AI", "本地模式复制本地路径；远程模式复制已经生成的 COS 报告链接，不会重复上传。"],
 ]
 
 export function InstructionsApp() {
@@ -38,7 +38,7 @@ export function InstructionsApp() {
       <header className="instructions-header">
         <div className="instructions-inner">
           <Brand />
-          <p className="instructions-kicker">本地浏览器采集工具</p>
+          <p className="instructions-kicker">浏览器运行态采集工具</p>
           <h1>从页面问题到可执行改动计划</h1>
           <p className="instructions-lead">采集运行态证据，核对问题目标，再把完整上下文交给当前项目中的 Codex、Claude 或 Cursor。</p>
         </div>
@@ -72,7 +72,7 @@ export function InstructionsApp() {
         </section>
 
         <section aria-labelledby="privacy-title" className="instructions-section">
-          <SectionHeading eyebrow="Privacy" id="privacy-title" title="仅支持本地保存与采集边界" />
+          <SectionHeading eyebrow="Privacy" id="privacy-title" title="本地 / 远程保存与采集边界" />
           <div className="privacy-grid">
             <article>
               <ShieldCheck aria-hidden="true" size={20} />
@@ -80,7 +80,7 @@ export function InstructionsApp() {
             </article>
             <article>
               <HardDrive aria-hidden="true" size={20} />
-              <div><h3>永久报告写入本地目录</h3><p>活动数据暂存在 Chrome session storage，完成后自动写入 Downloads/Rootline。</p></div>
+              <div><h3>本地或远程保存</h3><p>本地模式写入 Downloads/Rootline；远程模式直接写入你的腾讯云 COS。推荐“公有读、私有写”，不要使用公有读写。可以使用已有腾讯云密钥，不强制创建子用户，但最小权限 CAM 子用户更安全。</p></div>
             </article>
             <article>
               <Cookie aria-hidden="true" size={20} />
@@ -90,7 +90,7 @@ export function InstructionsApp() {
         </section>
 
         <section aria-labelledby="output-title" className="instructions-section">
-          <SectionHeading eyebrow="Output" id="output-title" title="离线输出" />
+          <SectionHeading eyebrow="Output" id="output-title" title="本地或远程输出" />
           <div className="output-row">
             <FileArchive aria-hidden="true" size={22} />
             <div><h3>rootline-capture-YYYY-MM-DD_HH-mm-ss-&lt;id&gt;</h3><p><span className="rl-mono">report.md</span>、<span className="rl-mono">report.json</span>、<span className="rl-mono">capture.png</span>，录屏采集另含 <span className="rl-mono">capture.webm</span></p></div>
@@ -104,7 +104,7 @@ export function InstructionsApp() {
         </section>
 
         <footer className="instructions-footer">
-          <Play aria-hidden="true" size={16} /><span>Rootline 不调用模型、不上传报告，也不修改你的源码。</span><Code2 aria-hidden="true" size={16} />
+          <Play aria-hidden="true" size={16} /><span>Rootline 不调用模型，也不会向 Rootline 服务器上传数据；远程模式只写入你自己的 COS。</span><Code2 aria-hidden="true" size={16} />
         </footer>
       </div>
     </main>

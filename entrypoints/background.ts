@@ -4,7 +4,10 @@ import type {
   ExtensionRequest,
   ExtensionResponse,
   OffscreenDownloadRequest,
+  OffscreenReexportRemoteRequest,
   OffscreenReexportRequest,
+  OffscreenTestCosRequest,
+  OffscreenWriteRemoteRequest,
   OffscreenWriteRequest,
   RuntimeSnapshotResponse,
   RuntimePrepareFinishResponse,
@@ -28,7 +31,8 @@ import {
 import { isOffscreenRecordingEndedMessage, RECORDING_MAX_DURATION_ALARM } from "../src/lib/recording-messages"
 import { normalizeRecordingMaxDurationMs } from "../src/lib/recording-settings"
 import { redactText, redactUrl, truncateText } from "../src/lib/redaction"
-import { buildReportMarkdown, createReport } from "../src/lib/report"
+import { clearTencentCosConfig, normalizeTencentCosConfig, readCaptureSaveConfig, saveTencentCosConfig, setCaptureSaveMode } from "../src/lib/remote-config"
+import { buildRemoteAiContext, buildReportMarkdown, createReport } from "../src/lib/report"
 import {
   cleanExpiredSessions,
   mutateSession,
@@ -45,9 +49,11 @@ import {
   REPORT_SCHEMA_VERSION,
   type ConsoleEvidence,
   type CaptureMode,
+  type CaptureSaveMode,
   type NetworkEvidence,
   type PageInfo,
   type LocalArtifactLocation,
+  type RemoteArtifactLocation,
   type RootlineReportV1,
   type RootlineSession,
 } from "../src/lib/types"
@@ -100,7 +106,7 @@ async function injectRuntime(tabId: number): Promise<void> {
   })
 }
 
-function createSession(tab: chrome.tabs.Tab, captureMode: CaptureMode = "screenshot"): RootlineSession {
+function createSession(tab: chrome.tabs.Tab, captureMode: CaptureMode = "screenshot", saveMode: CaptureSaveMode = "local"): RootlineSession {
   const now = new Date().toISOString()
   return {
     schemaVersion: REPORT_SCHEMA_VERSION,
@@ -111,6 +117,7 @@ function createSession(tab: chrome.tabs.Tab, captureMode: CaptureMode = "screens
     updatedAt: now,
     status: "capturing",
     captureMode,
+    saveMode,
     page: initialPage(tab),
     issue: { description: "", expectedResult: "", notes: "" },
     targets: [],
@@ -161,7 +168,9 @@ async function startSession(
     return existing
   }
   if (existing && ["reviewing", "exported"].includes(existing.status)) return existing
-  const session = createSession(tab, captureMode)
+  const saveConfig = await readCaptureSaveConfig()
+  if (saveConfig.mode === "remote" && !saveConfig.remote) throw new Error("请先配置腾讯云 COS。")
+  const session = createSession(tab, captureMode, saveConfig.mode)
   await saveSession(session)
   try {
     await injectRuntime(tabId)
@@ -196,7 +205,9 @@ async function reannotateSession(sessionId: string, senderTabId?: number): Promi
   const tabId = previous.tabId
   const currentTab = await chrome.tabs.get(tabId)
   if (!supportedUrl(currentTab.url)) throw new Error(UNSUPPORTED_PAGE_MESSAGE)
-  const session = createSession(currentTab, "screenshot")
+  const saveConfig = await readCaptureSaveConfig()
+  if (saveConfig.mode === "remote" && !saveConfig.remote) throw new Error("请先配置腾讯云 COS。")
+  const session = createSession(currentTab, "screenshot", saveConfig.mode)
   await sendToTab(tabId, { type: "ROOTLINE_CLEANUP" })
   await saveSession(session)
   try {
@@ -219,15 +230,27 @@ async function reannotateSession(sessionId: string, senderTabId?: number): Promi
 
 async function writeSessionOffscreen(session: RootlineSession): Promise<{
   report: RootlineReportV1
-  location: LocalArtifactLocation
+  localLocation?: LocalArtifactLocation
+  remoteLocation?: RemoteArtifactLocation
 }> {
   await ensureRootlineOffscreenDocument()
+  if (session.saveMode === "remote") {
+    const saveConfig = await readCaptureSaveConfig()
+    if (!saveConfig.remote) throw new Error("腾讯云 COS 配置不存在，请重新配置后重试。")
+    const response = (await chrome.runtime.sendMessage({
+      type: "OFFSCREEN_WRITE_REMOTE_SESSION",
+      session,
+      config: saveConfig.remote,
+    } satisfies OffscreenWriteRemoteRequest)) as ExtensionResponse<{ report: RootlineReportV1; location: RemoteArtifactLocation }>
+    if (!response?.ok || !response.data) throw new Error(response?.error ?? "腾讯云 COS 上传失败。")
+    return { report: response.data.report, remoteLocation: response.data.location }
+  }
   const response = (await chrome.runtime.sendMessage({
     type: "OFFSCREEN_WRITE_SESSION",
     session,
   } satisfies OffscreenWriteRequest)) as ExtensionResponse<{ report: RootlineReportV1; location: LocalArtifactLocation }>
   if (!response?.ok || !response.data) throw new Error(response?.error ?? "本地采集文件写入失败。")
-  return response.data
+  return { report: response.data.report, localLocation: response.data.location }
 }
 
 function mergeConsole(session: RootlineSession, events: ConsoleEvidence[]): void {
@@ -303,8 +326,15 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
         dataUrl: image,
         capturedAt: new Date().toISOString(),
       }
+      // The page UI is hidden only while taking the screenshot. Show a separate
+      // progress state while the potentially slower local/COS write finishes.
+      await sendToTab(current.tabId, {
+        type: "ROOTLINE_SHOW_FINISH_PROGRESS",
+        saveMode: current.saveMode ?? "local",
+      })
       const written = await writeSessionOffscreen({ ...current, status: "reviewing" })
-      current.localArtifacts = written.location
+      if (written.localLocation) current.localArtifacts = written.localLocation
+      if (written.remoteLocation) current.remoteArtifacts = written.remoteLocation
       current.boundaries = written.report.boundaries
       current.screenshot = {
         ...current.screenshot,
@@ -335,13 +365,18 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
 async function exportSession(sessionId: string): Promise<string> {
   const session = await readSession(sessionId)
   if (!session) throw new Error("采集会话不存在或已经过期。")
-  const directory = session.localArtifacts?.directoryName
-  if (!directory) throw new Error("本次采集没有可重新导出的本地记录。")
+  const directory = recordNameForSession(session)
+  if (!directory) throw new Error("本次采集没有可重新导出的记录。")
   await ensureRootlineOffscreenDocument()
-  const response = (await chrome.runtime.sendMessage({
-    type: "OFFSCREEN_REEXPORT_RECORD",
-    directoryName: directory,
-  } satisfies OffscreenReexportRequest)) as ExtensionResponse
+  const response = session.remoteArtifacts
+    ? (await chrome.runtime.sendMessage({
+        type: "OFFSCREEN_REEXPORT_REMOTE_RECORD",
+        directoryName: directory,
+      } satisfies OffscreenReexportRemoteRequest)) as ExtensionResponse
+    : (await chrome.runtime.sendMessage({
+        type: "OFFSCREEN_REEXPORT_RECORD",
+        directoryName: directory,
+      } satisfies OffscreenReexportRequest)) as ExtensionResponse
   if (!response?.ok) throw new Error(response?.error ?? "报告重新导出失败。")
   await mutateSession(sessionId, (current) => {
     current.status = "exported"
@@ -358,9 +393,10 @@ async function discardSession(sessionId: string): Promise<void> {
 }
 
 async function activeState(tabId?: number): Promise<ActiveState> {
-  const [tab, recording] = await Promise.all([
+  const [tab, recording, saveConfig] = await Promise.all([
     typeof tabId === "number" ? chrome.tabs.get(tabId).catch(() => null) : activeTab(),
     readActiveRecording(),
+    readCaptureSaveConfig(),
   ])
   const session = typeof tab?.id === "number" ? await readSessionForTab(tab.id) : null
   return {
@@ -369,11 +405,34 @@ async function activeState(tabId?: number): Promise<ActiveState> {
     ...(!supportedUrl(tab?.url) ? { unsupportedReason: UNSUPPORTED_PAGE_MESSAGE } : {}),
     session: session ? summarizeSession(session) : null,
     recording,
+    saveConfig,
   }
+}
+
+function recordNameForSession(session: RootlineSession): string | null {
+  if (session.localArtifacts?.directoryName) return session.localArtifacts.directoryName
+  if (session.remoteArtifacts?.objectPrefix) return session.remoteArtifacts.objectPrefix.split("/").filter(Boolean).at(-1) ?? null
+  return null
 }
 
 async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.MessageSender): Promise<ExtensionResponse<unknown>> {
   if (message.type === "GET_ACTIVE_STATE") return { ok: true, data: await activeState(message.tabId) }
+  if (message.type === "GET_SAVE_CONFIG") return { ok: true, data: await readCaptureSaveConfig() }
+  if (message.type === "SET_SAVE_MODE") return { ok: true, data: await setCaptureSaveMode(message.mode) }
+  if (message.type === "CLEAR_COS_CONFIG") return { ok: true, data: await clearTencentCosConfig() }
+  if (message.type === "SAVE_COS_CONFIG") {
+    return { ok: true, data: await saveTencentCosConfig(normalizeTencentCosConfig(message.config)) }
+  }
+  if (message.type === "TEST_COS_CONFIG") {
+    const config = normalizeTencentCosConfig(message.config)
+    await ensureRootlineOffscreenDocument()
+    const response = (await chrome.runtime.sendMessage({
+      type: "OFFSCREEN_TEST_COS",
+      config,
+    } satisfies OffscreenTestCosRequest)) as ExtensionResponse
+    if (!response?.ok) throw new Error(response?.error ?? "腾讯云 COS 连接测试失败。")
+    return { ok: true, data: response.data }
+  }
   if (message.type === "GET_SESSION") {
     const session = await readSession(message.sessionId)
     return session ? { ok: true, data: session } : { ok: false, error: "采集会话不存在或已经过期。" }
@@ -409,13 +468,14 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
       return { ok: false, error: "页面会话校验失败。" }
     }
     if (message.type === "GET_AI_CONTEXT_FROM_PAGE") {
-      return { ok: true, data: buildReportMarkdown(createReport(session)) }
+      return { ok: true, data: session.remoteArtifacts ? buildRemoteAiContext(session.remoteArtifacts) : buildReportMarkdown(createReport(session)) }
     }
     if (message.type === "EXPORT_FROM_PAGE") {
       return { ok: true, data: { directory: await exportSession(session.id) } }
     }
-    const reviewUrl = session.localArtifacts
-      ? `capture.html?record=${encodeURIComponent(session.localArtifacts.directoryName)}`
+    const recordName = recordNameForSession(session)
+    const reviewUrl = recordName
+      ? `capture.html?record=${encodeURIComponent(recordName)}`
       : `capture.html?session=${encodeURIComponent(session.id)}`
     await chrome.tabs.create({ url: chrome.runtime.getURL(reviewUrl) })
     return { ok: true }
@@ -495,7 +555,7 @@ export default defineBackground(() => {
       return true
     }
     const type = (message as { type?: string }).type
-    if (type === "OFFSCREEN_WRITE_SESSION" || type === "OFFSCREEN_REEXPORT_RECORD") return false
+    if (type === "OFFSCREEN_WRITE_SESSION" || type === "OFFSCREEN_WRITE_REMOTE_SESSION" || type === "OFFSCREEN_REEXPORT_RECORD" || type === "OFFSCREEN_REEXPORT_REMOTE_RECORD" || type === "OFFSCREEN_TEST_COS") return false
     if (type === "OFFSCREEN_DOWNLOAD_ARTIFACT") {
       const request = message as OffscreenDownloadRequest
       if (sender.id !== chrome.runtime.id || (!request.url.startsWith("blob:") && !request.url.startsWith("data:"))) {

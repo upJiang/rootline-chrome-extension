@@ -156,6 +156,17 @@ async function capturedEvidence(extensionPage: Page): Promise<{
   })
 }
 
+async function pointAtPageElement(page: Page, selector: string, click = false): Promise<void> {
+  const element = page.locator(selector)
+  await element.scrollIntoViewIfNeeded()
+  const box = await element.boundingBox()
+  if (!box) throw new Error(`Page element has no pointer geometry: ${selector}`)
+  const x = box.x + box.width / 2
+  const y = box.y + box.height / 2
+  await page.mouse.move(x, y)
+  if (click) await page.mouse.click(x, y)
+}
+
 async function annotateElement(
   page: Page,
   selector: string,
@@ -168,7 +179,7 @@ async function annotateElement(
   const existingTargetCount = await overlay.locator("button.target-index").count()
   if (await select.getAttribute("data-active") !== "true") await select.click()
   if (verifyLayout) {
-    await page.locator(selector).hover()
+    await pointAtPageElement(page, selector)
     const inspector = overlay.locator("[data-hover-label]")
     await expect(inspector).toBeVisible()
     await expect(inspector).toContainText(/\d+ x \d+px/)
@@ -187,11 +198,11 @@ async function annotateElement(
     await expect(elementMode).toHaveAttribute("data-active", "")
     await spacingMode.click()
     await expect(spacingMode).toHaveAttribute("data-active", "")
-    await page.locator(selector).hover()
+    await pointAtPageElement(page, selector)
     await expect(overlay.locator("[data-highlight]")).toHaveAttribute("data-kind", /text-line|spacing/)
     await elementMode.click()
   }
-  await page.locator(selector).click()
+  await pointAtPageElement(page, selector, true)
   const pendingToolbar = overlay.locator("[data-pending-toolbar]")
   await expect(pendingToolbar).toBeVisible()
   await expect(overlay.locator("[data-editor]")).toBeHidden()
@@ -213,7 +224,7 @@ async function annotateElement(
     expect(parentRect.width * parentRect.height).toBeGreaterThanOrEqual(initialRect.width * initialRect.height)
     await pendingToolbar.locator("button[data-reselect-target]").click()
     await expect(pendingToolbar).toBeHidden()
-    await page.locator(selector).click()
+    await pointAtPageElement(page, selector, true)
     await expect(pendingToolbar).toBeVisible()
 
     const originalViewport = page.viewportSize() ?? { width: 1280, height: 720 }
@@ -254,7 +265,7 @@ async function annotateElement(
   if (verifyLayout) {
     const editor = overlay.locator("[data-editor]")
     await editor.hover()
-    await page.locator("h1").hover()
+    await pointAtPageElement(page, "h1")
     await expect(editor).toBeHidden({ timeout: 3_000 })
     await overlay.locator("button.target-index").first().hover()
     await expect(editor).toBeVisible()
@@ -505,10 +516,9 @@ test.beforeAll(async () => {
   const manifestPath = join(extensionPath, "manifest.json")
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as Record<string, unknown>
   productionManifest = structuredClone(manifest)
-  // The production manifest intentionally has no host permissions. The temporary
-  // E2E copy uses all_urls so Chrome's captureVisibleTab permission is available
-  // after the fixture page is refreshed; the production manifest assertion above
-  // still guards the shipped permission boundary.
+  // Production only grants the Tencent COS host. The temporary E2E copy uses
+  // all_urls so captureVisibleTab remains available after the fixture is refreshed;
+  // the production assertion below still guards the shipped permission boundary.
   manifest.host_permissions = ["<all_urls>"]
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
 
@@ -528,9 +538,9 @@ test.afterAll(async () => {
   if (temporaryRoot) rmSync(temporaryRoot, { recursive: true, force: true })
 })
 
-test("production manifest keeps capture local and on demand", () => {
+test("production manifest keeps page capture on demand and limits remote access to Tencent COS", () => {
   expect(productionManifest.permissions).toEqual(["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads"])
-  expect(productionManifest.host_permissions).toBeUndefined()
+  expect(productionManifest.host_permissions).toEqual(["https://*.myqcloud.com/*"])
   expect(productionManifest.optional_host_permissions).toBeUndefined()
   expect(productionManifest).not.toHaveProperty("content_scripts")
 })
@@ -551,7 +561,7 @@ test("popup keeps its intended width when Chrome starts from a narrow viewport",
   }
 })
 
-test("uses the Chrome download directory without setup", async () => {
+test("defaults to Chrome Downloads and exposes optional Tencent COS settings", async () => {
   const fixturePage = context.pages()[0] ?? await context.newPage()
   await fixturePage.goto("http://127.0.0.1:4178/react.html")
   const popup = await openExtensionTab("popup.html")
@@ -564,7 +574,27 @@ test("uses the Chrome download directory without setup", async () => {
   await expect(popup.getByRole("dialog", { name: "保存位置" })).toHaveCount(0)
   await expect(popup.getByText("目录路径（选填）")).toHaveCount(0)
   await expect(popup.getByText(/清理.*临时会话/)).toHaveCount(0)
-  await expect(popup.getByText("仅支持本地保存，文件保存位置默认浏览器下载目录", { exact: true })).toBeVisible()
+  await expect(popup.getByRole("tab", { name: "本地" })).toHaveAttribute("aria-selected", "true")
+  await expect(popup.getByText("文件保存到浏览器下载目录 / Rootline", { exact: true })).toBeVisible()
+  const pagesBeforeSettings = new Set(context.pages())
+  await popup.getByRole("tab", { name: "远程" }).click()
+  await expect.poll(() => context.pages().find((page) => !pagesBeforeSettings.has(page) && page.url().includes("/cos-settings.html"))?.url() ?? "").toContain("cos-settings.html")
+  const settingsPage = context.pages().find((page) => !pagesBeforeSettings.has(page) && page.url().includes("/cos-settings.html"))
+  if (!settingsPage) throw new Error("COS settings popup was not opened")
+  await expect(settingsPage.getByRole("heading", { name: "腾讯云 COS 配置" })).toBeVisible()
+  await expect(settingsPage.getByText("访问权限请选择“公有读、私有写”", { exact: true })).toBeVisible()
+  await expect(settingsPage.getByText(/不要选择“公有读写”/)).toBeVisible()
+  await expect(settingsPage.getByText(/不需要填写子账号 ID/)).toBeVisible()
+  await expect(settingsPage.getByText(/QcloudCollApiKeyManageAccess/)).toBeVisible()
+  await expect(settingsPage.getByRole("link", { name: "CAM 用户管理" })).toHaveAttribute("href", "https://console.cloud.tencent.com/cam/user")
+  await expect(settingsPage.getByRole("link", { name: "API 密钥管理" })).toHaveAttribute("href", "https://console.cloud.tencent.com/cam/capi")
+  const formCardColumns = await settingsPage.locator(".cos-settings-form-card").evaluate((element) => getComputedStyle(element).gridTemplateColumns)
+  expect(formCardColumns.split(" ").length).toBe(1)
+  await expect(settingsPage.getByLabel("Bucket")).toBeVisible()
+  await expect(settingsPage.getByLabel("SecretKey")).toHaveAttribute("type", "password")
+  await settingsPage.getByRole("button", { name: "关闭配置窗口" }).click()
+  await settingsPage.close()
+  await expect(popup.getByRole("tab", { name: "本地" })).toHaveAttribute("aria-selected", "true")
   if (process.env.ROOTLINE_SCREENSHOTS === "1") {
     await popup.setViewportSize({ width: 380, height: 680 })
     await popup.screenshot({ path: "/tmp/rootline-save-location.png", fullPage: true })

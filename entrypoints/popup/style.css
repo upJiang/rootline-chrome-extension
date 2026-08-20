@@ -156,6 +156,59 @@ body,
   text-align: center;
 }
 
+.save-mode-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: var(--space-2);
+  text-align: left;
+}
+
+.save-mode-footer > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.save-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-height: 44px;
+  border: var(--rule-thin) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  background: var(--color-surface-subtle);
+}
+
+.save-mode-tabs button {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-weight: 700;
+}
+
+.save-mode-tabs button[aria-selected="true"] {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 1px 3px oklch(0.2 0.01 155 / 0.12);
+}
+
+.save-mode-tabs button:hover:not(:disabled) {
+  color: var(--color-accent-ink);
+}
+
+.save-settings {
+  min-height: 44px;
+}
+
 .capture-entry-actions,
 .recording-away {
   display: grid;

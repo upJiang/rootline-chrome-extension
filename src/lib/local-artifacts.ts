@@ -22,6 +22,7 @@ import type {
   RootlineIssue,
   RootlineReportV1,
   RootlineSession,
+  RemoteArtifactLocation,
 } from "./types"
 
 const DOWNLOAD_ROOT_DIRECTORY = "Rootline"
@@ -105,6 +106,15 @@ const localArtifactsSchema = z.object({
   downloadIds: downloadIdsSchema,
   savedAt: z.string(),
 })
+const remoteArtifactsSchema = z.object({
+  provider: z.literal("tencent-cos"),
+  objectPrefix: z.string(),
+  reportUrl: z.string().url(),
+  recordingUrl: z.string().url().optional(),
+  reportKey: z.string(),
+  recordingKey: z.string().optional(),
+  uploadedAt: z.string(),
+})
 
 export const rootlineReportSchema = z.object({
   schemaVersion: z.literal(1),
@@ -161,6 +171,8 @@ export const rootlineReportSchema = z.object({
     })).optional(),
   }).optional(),
   localArtifacts: localArtifactsSchema.optional(),
+  saveMode: z.enum(["local", "remote"]).optional(),
+  remoteArtifacts: remoteArtifactsSchema.optional(),
   generatedAt: z.string(),
 }).passthrough()
 
@@ -169,6 +181,7 @@ export interface CaptureHistoryItem {
   state: "ready" | "invalid"
   report?: RootlineReportV1
   location?: LocalArtifactLocation
+  remoteLocation?: RemoteArtifactLocation
   hasCapture: boolean
   hasRecording: boolean
   hasMarkdown: boolean
@@ -181,7 +194,8 @@ export interface CaptureHistoryItem {
 
 export interface CaptureRecord {
   report: RootlineReportV1
-  location: LocalArtifactLocation
+  location?: LocalArtifactLocation
+  remoteLocation?: RemoteArtifactLocation
   captureFile: File | null
   recordingFile: File | null
   hasMarkdown: boolean
@@ -317,11 +331,40 @@ async function downloadAvailability(downloadId?: number): Promise<ArtifactAvaila
   }
 }
 
+async function remoteAvailability(url?: string): Promise<ArtifactAvailability> {
+  if (!url || typeof fetch !== "function") return "unknown"
+  try {
+    const response = await fetch(url, { method: "HEAD", cache: "no-store" })
+    return response.ok ? "available" : "missing"
+  } catch {
+    return "unknown"
+  }
+}
+
 async function recordFromStored(stored: StoredCaptureRecord): Promise<CaptureRecord> {
   const report = rootlineReportSchema.parse(stored.report) as RootlineReportV1
   const location = report.localArtifacts
-  if (!location) throw new Error("采集记录缺少本地文件位置。")
+  const remoteLocation = report.remoteArtifacts
+  if (!location && !remoteLocation) throw new Error("采集记录缺少文件位置信息。")
   const captureFile = stored.captureDataUrl ? dataUrlToFile(stored.captureDataUrl, "capture.png") : null
+  if (remoteLocation) {
+    const [reportState, recordingState] = await Promise.all([
+      remoteAvailability(remoteLocation.reportUrl),
+      report.recording ? remoteAvailability(remoteLocation.recordingUrl) : Promise.resolve("missing" as const),
+    ])
+    return {
+      report,
+      remoteLocation,
+      captureFile,
+      recordingFile: null,
+      hasMarkdown: reportState !== "missing",
+      captureState: captureFile ? "available" : "missing",
+      recordingState,
+      markdownState: reportState,
+      jsonState: "missing",
+    }
+  }
+  if (!location) throw new Error("采集记录缺少本地文件位置。")
   const ids = location.downloadIds
   const [captureState, recordingState, markdownState, jsonState] = await Promise.all([
     downloadAvailability(ids?.capture),
@@ -357,7 +400,8 @@ export async function listCaptureHistory(): Promise<CaptureHistoryItem[]> {
         directoryName: stored.directoryName,
         state: "ready",
         report: record.report,
-        location: record.location,
+        ...(record.location ? { location: record.location } : {}),
+        ...(record.remoteLocation ? { remoteLocation: record.remoteLocation } : {}),
         hasCapture: record.captureState !== "missing",
         hasRecording: record.recordingState !== "missing",
         hasMarkdown: record.hasMarkdown,
@@ -393,6 +437,7 @@ function fallbackRelativeDirectory(directoryName: string): string {
 }
 
 async function rewriteDownloadedRecord(record: CaptureRecord, report: RootlineReportV1): Promise<CaptureRecord> {
+  if (!record.location) throw new Error("采集记录缺少本地文件位置。")
   const relativeDirectory = record.location.downloadRelativeDirectory ?? fallbackRelativeDirectory(record.location.directoryName)
   const markdown = await requestArtifactDownloadBlob(
     `${relativeDirectory}/report.md`,
@@ -429,6 +474,7 @@ async function rewriteDownloadedRecord(record: CaptureRecord, report: RootlineRe
 
 async function rewriteRecord(directoryName: string, issue?: RootlineIssue): Promise<CaptureRecord> {
   const record = await readCaptureRecord(directoryName)
+  if (!record.location) throw new Error("该记录是远程报告，请使用腾讯云 COS 重新导出。")
   if (issue && record.report.issue.description === issue.description
     && record.report.issue.expectedResult === issue.expectedResult
     && record.report.issue.notes === issue.notes) {
@@ -454,6 +500,11 @@ export async function updateCaptureRecordIssue(directoryName: string, issue: Roo
 
 export async function openCaptureRecording(directoryName: string): Promise<ArtifactAvailability> {
   const record = await readCaptureRecord(directoryName)
+  if (record.remoteLocation?.recordingUrl) {
+    await chrome.tabs.create({ url: record.remoteLocation.recordingUrl })
+    return "available"
+  }
+  if (!record.location) return "missing"
   const downloadId = record.location.downloadIds?.recording
   if (typeof downloadId !== "number") return record.recordingState
   const state = await downloadAvailability(downloadId)
