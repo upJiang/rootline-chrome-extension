@@ -10,20 +10,20 @@ scripting
 storage
 offscreen
 downloads
-host_permissions: https://*.myqcloud.com/*
+host_permissions: https://*.myqcloud.com/*、https://*.aliyuncs.com/*
 ```
 
-没有 `<all_urls>`、`optional_host_permissions`、`content_scripts`、`cookies`、`webRequest`、`debugger` 或 `desktopCapture`。腾讯云 COS host permission 只在远程模式上传时使用。
+没有 `<all_urls>`、`optional_host_permissions`、`content_scripts`、`cookies`、`webRequest`、`debugger` 或 `desktopCapture`。腾讯云 COS 和阿里云 OSS host permission 只在远程模式上传时使用。
 
 ## Single purpose description
 
 可直接填写：
 
-> Rootline 在用户主动开始后采集当前网页的运行态证据，包括用户选择的元素、可见截图、控制台和网络事件。默认将脱敏后的调试报告保存到用户本机 Chrome 下载目录；用户主动选择远程模式后，才会直接上传到用户配置的腾讯云 COS，供 AI 编程工具读取。
+> Rootline 在用户主动开始后采集当前网页的运行态证据，包括用户选择的元素、可见截图、控制台和网络事件。默认将脱敏后的调试报告保存到用户本机 Chrome 下载目录；用户主动选择远程模式后，才会直接上传到用户配置的腾讯云 COS 或阿里云 OSS，供 AI 编程工具读取。
 
 英文：
 
-> Rootline collects runtime evidence from the current webpage only after an explicit user action, including selected elements, a visible-page screenshot, console events, and network events. It saves a sanitized debugging report to the user's local Chrome Downloads directory by default, or uploads it directly to a Tencent COS bucket explicitly configured and owned by the user.
+> Rootline collects runtime evidence from the current webpage only after an explicit user action, including selected elements, a visible-page screenshot, console events, and network events. It saves a sanitized debugging report to the user's local Chrome Downloads directory by default, or uploads it directly to a Tencent COS or Alibaba OSS bucket explicitly configured and owned by the user.
 
 ## Permission justification
 
@@ -41,15 +41,15 @@ host_permissions: https://*.myqcloud.com/*
 
 ### `storage`
 
-> 使用 `chrome.storage.session` 保存最长 24 小时的活动采集会话和当前标签索引；使用 `chrome.storage.local` 保存浮动面板位置、录屏状态和用户主动配置的腾讯云 COS 凭证。凭证只保存在当前浏览器，不会发送给 Rootline，也不会写入报告。报告历史和本地媒体缓存保存在扩展 IndexedDB，不使用同步存储。COS 配置在独立的扩展弹窗中编辑，不依赖页面内的小 Popup 表单。
+> 使用 `chrome.storage.session` 保存最长 24 小时的活动采集会话和当前标签索引；使用 `chrome.storage.local` 保存浮动面板位置、录屏状态和用户主动配置的腾讯云 COS 或阿里云 OSS 凭证。凭证只保存在当前浏览器，不会发送给 Rootline，也不会写入报告。报告历史和本地媒体缓存保存在扩展 IndexedDB，不使用同步存储。远程配置在独立的扩展弹窗中编辑。
 
 ### `downloads`
 
 > 将 `report.md`、`report.json`、`capture.png` 和可选 `capture.webm` 写入 Chrome 下载目录，并读取 Chrome 返回的实际文件路径、下载状态和下载 ID，以便在报告中提供准确本地路径、打开录屏和检查文件是否可用。下载使用 `saveAs: false`。
 
-### `host_permissions: https://*.myqcloud.com/*`
+### `host_permissions: https://*.myqcloud.com/*`、`https://*.aliyuncs.com/*`
 
-> 仅在用户主动切换到远程保存并配置腾讯云 COS 后，访问用户填写的 COS API 和公开报告地址。默认本地模式不会访问腾讯云，也不会上传数据。
+> 仅在用户主动切换到远程保存并配置腾讯云 COS 或阿里云 OSS 后，访问用户填写的对象存储 API 和公开报告地址。默认本地模式不会访问对象存储，也不会上传数据。
 
 ### `offscreen`
 
@@ -88,7 +88,7 @@ host_permissions: https://*.myqcloud.com/*
 
 ### 数据是否传出用户设备
 
-> Rootline has no developer-operated backend, upload endpoint, analytics SDK, advertising SDK, account system, or AI API. In local mode, captured evidence is stored only in Chrome extension storage, IndexedDB, and the user's Chrome Downloads directory. In remote mode, the user explicitly configures a Tencent COS bucket and the extension uploads directly to that user-owned bucket; Rootline does not receive or retain the uploaded data.
+> Rootline has no developer-operated backend, upload endpoint, analytics SDK, advertising SDK, account system, or AI API. In local mode, captured evidence is stored only in Chrome extension storage, IndexedDB, and the user's Chrome Downloads directory. In remote mode, the user explicitly configures a Tencent COS or Alibaba OSS bucket and the extension uploads directly to that user-owned bucket; Rootline does not receive or retain the uploaded data.
 
 ### 是否出售用户数据
 
@@ -104,17 +104,17 @@ host_permissions: https://*.myqcloud.com/*
 
 ### 是否允许开发者或第三方人工读取数据
 
-> Rootline does not transmit evidence to the developer and does not enable developer or unrelated third-party human access. When the user explicitly selects remote mode, the extension sends the report directly to the user's own Tencent COS bucket under the user's Tencent Cloud account. Tencent Cloud processes that storage under the user's agreement with Tencent Cloud. Public-read report links may be opened by anyone who receives the URL.
+> Rootline does not transmit evidence to the developer and does not enable developer or unrelated third-party human access. When the user explicitly selects remote mode, the extension sends the report directly to the user's own Tencent COS or Alibaba OSS bucket under the user's cloud account. The selected cloud provider processes that storage under the user's agreement with that provider. Public-read report links may be opened by anyone who receives the URL.
 
 ## Limited Use disclosure
 
 可放在隐私政策和项目主页：
 
-> Rootline 对用户数据的使用仅限于提供其单一用途：在用户主动操作后采集当前网页的运行态证据，并生成本地调试报告或用户自有 COS 报告。Rootline 不出售数据，不将数据用于广告、画像、信用评估或与该用途无关的分析，也不把数据传输给开发者；远程模式只按用户指示直传其腾讯云 COS。
+> Rootline 对用户数据的使用仅限于提供其单一用途：在用户主动操作后采集当前网页的运行态证据，并生成本地调试报告或用户自有对象存储报告。Rootline 不出售数据，不将数据用于广告、画像、信用评估或与该用途无关的分析，也不把数据传输给开发者；远程模式只按用户指示直传其腾讯云 COS 或阿里云 OSS。
 
 英文：
 
-> Rootline's use of user data is limited to its single purpose: collecting runtime evidence from the current webpage after an explicit user action and generating a local report or a report in the user's own Tencent COS bucket. Rootline does not sell data, use it for advertising, profiling, credit decisions, or unrelated analytics, or transmit it to the developer. Remote mode transfers files only to the Tencent COS bucket explicitly configured by the user.
+> Rootline's use of user data is limited to its single purpose: collecting runtime evidence from the current webpage after an explicit user action and generating a local report or a report in the user's own Tencent COS or Alibaba OSS bucket. Rootline does not sell data, use it for advertising, profiling, credit decisions, or unrelated analytics, or transmit it to the developer. Remote mode transfers files only to the object storage bucket explicitly configured by the user.
 
 ## Privacy policy URL
 

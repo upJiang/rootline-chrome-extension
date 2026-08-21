@@ -125,12 +125,12 @@ export function PopupApp() {
         width: 760,
       })
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "无法打开腾讯云 COS 配置窗口。")
+      setError(nextError instanceof Error ? nextError.message : "无法打开远程保存配置窗口。")
     }
   }
 
   const setSaveMode = (mode: "local" | "remote") => run(`mode:${mode}`, async () => {
-    if (mode === "remote" && !state?.saveConfig?.remote) {
+    if (mode === "remote" && !(state?.saveConfig?.provider === "aliyun-oss" ? state.saveConfig.aliyunOss : state?.saveConfig?.tencentCos ?? state?.saveConfig?.remote)) {
       await openCosSettings()
       return
     }
@@ -321,7 +321,7 @@ export function PopupApp() {
         </section>
       ) : canReview ? (
         <section className="capture-state">
-          <Notice title="本次证据已生成" tone="success">{session.remoteArtifacts ? "报告已上传到你的腾讯云 COS，可直接复制远程链接。" : "报告和标注截图已保存到本机，完整路径可在证据页查看。"}</Notice>
+          <Notice title="本次证据已生成" tone="success">{session.remoteArtifacts ? `报告已上传到你的${session.remoteArtifacts.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}，可直接复制远程链接。` : "报告和标注截图已保存到本机，完整路径可在证据页查看。"}</Notice>
           <button className="rl-button rl-button--primary w-full" onClick={openReview} type="button">
             <ArrowUpRight aria-hidden="true" size={17} />
             查看本次完整证据
@@ -373,10 +373,10 @@ export function PopupApp() {
             <Cloud aria-hidden="true" size={15} />远程
           </button>
         </div>
-        <button aria-label="配置腾讯云 COS" className="rl-button rl-icon-button save-settings" onClick={() => void openCosSettings()} title="远程保存设置" type="button">
+        <button aria-label="配置远程保存" className="rl-button rl-icon-button save-settings" onClick={() => void openCosSettings()} title="远程保存设置" type="button">
           <Settings2 aria-hidden="true" size={16} />
         </button>
-        <p>{state?.saveConfig?.mode === "remote" ? `腾讯云 COS · ${state.saveConfig.remote?.bucket ?? "未配置"}` : "文件保存到浏览器下载目录 / Rootline"}</p>
+        <p>{state?.saveConfig?.mode === "remote" ? `${state.saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"} · ${(state.saveConfig.provider === "aliyun-oss" ? state.saveConfig.aliyunOss?.bucket : state.saveConfig.tencentCos?.bucket ?? state.saveConfig.remote?.bucket) ?? "未配置"}` : "文件保存到浏览器下载目录 / Rootline"}</p>
       </footer>
     </main>
   )

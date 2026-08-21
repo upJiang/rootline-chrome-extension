@@ -23,6 +23,39 @@ body {
   color: var(--color-ink-muted);
 }
 
+.provider-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: var(--rule-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+
+.provider-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.provider-tabs button:hover,
+.provider-tabs button:focus-visible {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.provider-tabs button[aria-selected="true"] {
+  background: var(--color-surface);
+  box-shadow: 0 1px 4px rgb(24 32 28 / 10%);
+  color: var(--color-accent);
+}
+
 .cos-settings-header,
 .cos-settings-section-heading,
 .cos-settings-actions {

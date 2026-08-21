@@ -2,11 +2,11 @@
 
 ## 可直接粘贴的审核说明
 
-Rootline is a local-first developer tool. It collects runtime evidence from the current HTTP/HTTPS tab only after the user explicitly clicks "开始标注" (Start annotation) or "录制页面" (Record page). Local mode requires no account, credential, backend, upload endpoint, analytics SDK, or payment. Remote mode is optional and uploads directly to a Tencent COS bucket explicitly configured by the user; the COS settings open in a separate extension popup window. Rootline has no backend and does not receive the data.
+Rootline is a local-first developer tool. It collects runtime evidence from the current HTTP/HTTPS tab only after the user explicitly clicks "开始标注" (Start annotation) or "录制页面" (Record page). Local mode requires no account, credential, backend, upload endpoint, analytics SDK, or payment. Remote mode is optional and uploads directly to a Tencent COS or Alibaba OSS bucket explicitly configured by the user; the settings open in a separate extension popup window. Rootline has no backend and does not receive the data.
 
 All JavaScript, CSS, fonts, and dependencies are bundled in the extension package. Rootline does not execute remote code. Captured DOM, console messages, and network responses are treated as untrusted text and are not executed.
 
-The extension saves local-mode artifacts under the user's Chrome Downloads directory. In optional remote mode it uploads a self-contained `report.html` and optional `capture.webm` directly to the user's Tencent COS bucket. Rootline does not receive, proxy, or retain the uploaded data.
+The extension saves local-mode artifacts under the user's Chrome Downloads directory. In optional remote mode it uploads a self-contained `report.html` and optional `capture.webm` directly to the user's Tencent COS or Alibaba OSS bucket. Rootline does not receive, proxy, or retain the uploaded data.
 
 ## 审核复现步骤
 
@@ -38,15 +38,15 @@ The extension saves local-mode artifacts under the user's Chrome Downloads direc
 - `scripting`：按需注入页面桥和运行态采集器；没有常驻 content script。
 - `storage`：保存活动会话、浮层位置和本地历史索引。
 - `downloads`：把本地模式的报告和媒体写入 Chrome 下载目录，并读取 Chrome 返回的实际本地路径和文件状态。
-- `host_permissions`：仅在用户配置并主动使用腾讯云 COS 远程模式时访问 COS。
+- `host_permissions`：仅在用户配置并主动使用腾讯云 COS 或阿里云 OSS 远程模式时访问相应对象存储。
 - `offscreen`：执行用户授权的 MediaRecorder、标注截图和 Blob 本地下载。
 - `alarms`：在录屏达到内部时长上限时停止录制，避免无限运行。
 
-生产 Manifest 只包含 `https://*.myqcloud.com/*` COS host permission，不包含 `<all_urls>`、cookies、webRequest、debugger 或 desktopCapture。
+生产 Manifest 只包含 `https://*.myqcloud.com/*` 和 `https://*.aliyuncs.com/*` 对象存储 host permission，不包含 `<all_urls>`、cookies、webRequest、debugger 或 desktopCapture。
 
 ## 单一用途与数据边界
 
-Rootline 的唯一用途是：在用户主动操作后采集当前网页的运行态证据，并生成调试报告。它不自动分析根因、不修改代码、不提交、不部署，也不提供 Rootline 云端服务。远程模式只写入用户主动配置的腾讯云 COS。
+Rootline 的唯一用途是：在用户主动操作后采集当前网页的运行态证据，并生成调试报告。它不自动分析根因、不修改代码、不提交、不部署，也不提供 Rootline 云端服务。远程模式只写入用户主动配置的腾讯云 COS 或阿里云 OSS。
 
 已知敏感 Header、Query、JSON 和表单字段在进入存储前替换为 `[REDACTED]`。Rootline 不读取 Cookie、LocalStorage、SessionStorage、密码字段值、完整浏览历史或完整页面 HTML。
 

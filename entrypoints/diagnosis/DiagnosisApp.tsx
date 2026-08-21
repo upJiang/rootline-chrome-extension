@@ -413,7 +413,7 @@ export function DiagnosisApp() {
             ) : mediaMode === "recording" && recordingAvailability ? (
               <div className="capture-missing">
                 <ImageOff aria-hidden="true" size={28} />
-                <p>{session.remoteArtifacts ? (recordingAvailability === "available" ? "录屏已保存到腾讯云 COS" : "远程录屏链接无法访问") : recordingAvailability === "available" ? "录屏保存在本地下载目录" : recordingAvailability === "unknown" ? "Chrome 下载记录已清理，无法确认录屏位置" : "报告包含录屏信息，但 capture.webm 已缺失"}</p>
+                <p>{session.remoteArtifacts ? (recordingAvailability === "available" ? `录屏已保存到${session.remoteArtifacts.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}` : "远程录屏链接无法访问") : recordingAvailability === "available" ? "录屏保存在本地下载目录" : recordingAvailability === "unknown" ? "Chrome 下载记录已清理，无法确认录屏位置" : "报告包含录屏信息，但 capture.webm 已缺失"}</p>
                 {recordingAvailability === "available" && recordDirectory ? <button className="rl-button" onClick={() => void openCaptureRecording(recordDirectory)} type="button"><Video aria-hidden="true" size={16} />{session.remoteArtifacts ? "打开远程录屏" : "打开本地录屏"}</button> : null}
               </div>
             ) : annotatedCapture ? (

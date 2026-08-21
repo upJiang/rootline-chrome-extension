@@ -5,7 +5,7 @@ import { readCaptureSaveConfig } from "./remote-config"
 import { buildRemoteReportHtml } from "./remote-report"
 import { createReport } from "./report"
 import { readRecordingResult } from "./recording-result-store"
-import { buildCosObjectUrl, deleteCosObject, joinCosKey, putCosObject } from "./tencent-cos"
+import { buildRemoteObjectUrl, deleteRemoteObject, joinRemoteKey, putRemoteObject } from "./remote-storage"
 import { buildCaptureDirectoryName } from "./time"
 import { withoutScreenshotPayload } from "./screenshot-payload"
 import type {
@@ -13,7 +13,7 @@ import type {
   RootlineIssue,
   RootlineReportV1,
   RootlineSession,
-  TencentCosConfig,
+  RemoteStorageConfig,
 } from "./types"
 
 function captureDirectoryName(session: Pick<RootlineSession, "id" | "startedAt">): string {
@@ -39,18 +39,18 @@ function notifyRemoteProgress(sessionId: string, progress: RemoteSaveProgress): 
 
 function remoteLocation(
   session: RootlineSession,
-  config: TencentCosConfig,
+  config: RemoteStorageConfig,
 ): RemoteArtifactLocation {
   const directoryName = captureDirectoryName(session)
-  const objectPrefix = joinCosKey(config.objectPrefix, directoryName)
-  const reportKey = joinCosKey(objectPrefix, "report.html")
-  const recordingKey = session.recording ? joinCosKey(objectPrefix, "capture.webm") : undefined
+  const objectPrefix = joinRemoteKey(config, config.objectPrefix, directoryName)
+  const reportKey = joinRemoteKey(config, objectPrefix, "report.html")
+  const recordingKey = session.recording ? joinRemoteKey(config, objectPrefix, "capture.webm") : undefined
   return {
-    provider: "tencent-cos",
+    provider: config.provider,
     objectPrefix,
     reportKey,
-    reportUrl: buildCosObjectUrl(config, reportKey),
-    ...(recordingKey ? { recordingKey, recordingUrl: buildCosObjectUrl(config, recordingKey) } : {}),
+    reportUrl: buildRemoteObjectUrl(config, reportKey),
+    ...(recordingKey ? { recordingKey, recordingUrl: buildRemoteObjectUrl(config, recordingKey) } : {}),
     uploadedAt: new Date().toISOString(),
   }
 }
@@ -69,7 +69,7 @@ async function saveRemoteHistory(report: RootlineReportV1, captureDataUrl: strin
 
 export async function writeRemoteSessionArtifacts(
   session: RootlineSession,
-  config: TencentCosConfig,
+  config: RemoteStorageConfig,
 ): Promise<{ report: RootlineReportV1; location: RemoteArtifactLocation }> {
   notifyRemoteProgress(session.id, { stage: "rendering-capture" })
   const captureDataUrl = await remoteStage("生成远程标注截图", () => renderAnnotatedCapture(session, {
@@ -104,7 +104,7 @@ export async function writeRemoteSessionArtifacts(
         totalBytes: recordingResult.blob.size,
         percent: 0,
       })
-      await remoteStage("上传录屏", () => putCosObject(
+      await remoteStage("上传录屏", () => putRemoteObject(
         config,
         location.recordingKey!,
         recordingResult.blob,
@@ -120,7 +120,7 @@ export async function writeRemoteSessionArtifacts(
       totalBytes: reportBlob.size,
       percent: 0,
     })
-    await remoteStage("上传远程报告", () => putCosObject(
+    await remoteStage("上传远程报告", () => putRemoteObject(
       config,
       location.reportKey,
       reportBlob,
@@ -145,7 +145,7 @@ export async function writeRemoteSessionArtifacts(
     }
     return { report: storedReport, location }
   } catch (error) {
-    await Promise.all(uploadedKeys.map((key) => deleteCosObject(config, key).catch(() => undefined)))
+    await Promise.all(uploadedKeys.map((key) => deleteRemoteObject(config, key).catch(() => undefined)))
     throw error
   }
 }
@@ -156,10 +156,11 @@ async function rewriteRemoteRecord(directoryName: string, issue?: RootlineIssue)
     readCaptureSaveConfig(),
   ])
   if (!stored?.report.remoteArtifacts || !stored.captureDataUrl) throw new Error("远程采集记录不存在或截图缓存已经被清理。")
-  if (!saveConfig.remote) throw new Error("请先重新配置腾讯云 COS。")
-  const expectedReportUrl = buildCosObjectUrl(saveConfig.remote, stored.report.remoteArtifacts.reportKey)
+  const activeConfig = saveConfig.provider === "aliyun-oss" ? saveConfig.aliyunOss : saveConfig.tencentCos ?? saveConfig.remote
+  if (!activeConfig) throw new Error("远程配置不存在，请重新配置后重试。")
+  const expectedReportUrl = buildRemoteObjectUrl(activeConfig, stored.report.remoteArtifacts.reportKey)
   if (expectedReportUrl !== stored.report.remoteArtifacts.reportUrl) {
-    throw new Error("当前腾讯云 COS 配置与这条历史记录不一致。请切换回原 Bucket、Region 和访问域名后重试。")
+    throw new Error("当前远程配置与这条历史记录不一致。请切换回原来的 Bucket、Region 和访问域名后重试。")
   }
 
   const generated = createReport({
@@ -170,8 +171,8 @@ async function rewriteRemoteRecord(directoryName: string, issue?: RootlineIssue)
     remoteArtifacts: { ...stored.report.remoteArtifacts, uploadedAt: new Date().toISOString() },
   })
   const report = issue ? { ...generated, generatedAt: stored.report.generatedAt } : generated
-  await putCosObject(
-    saveConfig.remote,
+  await putRemoteObject(
+    activeConfig,
     report.remoteArtifacts!.reportKey,
     new Blob([buildRemoteReportHtml(report, stored.captureDataUrl)], { type: "text/html;charset=utf-8" }),
     "text/html;charset=utf-8",

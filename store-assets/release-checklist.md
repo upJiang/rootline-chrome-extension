@@ -7,7 +7,7 @@ image.png# Rootline Chrome Web Store 发布清单
 - [x] `pnpm build`
 - [x] `pnpm test:e2e`：6 个用例通过
 - [x] `pnpm zip`
-- [x] ZIP Manifest 只包含 `https://*.myqcloud.com/*` host permission，归档内无开发 Profile、fixture、trace、商店素材、测试凭证或本机源码路径
+- [x] ZIP Manifest 只包含 `https://*.myqcloud.com/*` 和 `https://*.aliyuncs.com/*` host permission，归档内无开发 Profile、fixture、trace、商店素材、测试凭证或本机源码路径
 
 待完成项仍包括开发者主体、公开 URL、商店后台填写、真实 Chrome 录屏确认，以及使用用户测试桶完成一次真实 COS 上传验收。
 
@@ -28,7 +28,7 @@ image.png# Rootline Chrome Web Store 发布清单
 - [ ] 上传 `icon-128.png`。
 - [ ] 按顺序上传 `screenshots/01-start-capture.png` 到 `05-capture-history.png`。
 - [ ] 可选上传 `promo/small-promo-tile-440x280.png` 和 `promo/marquee-promo-tile-1400x560.png`。
-- [ ] 不填写自动修复、Rootline 云端同步、源码定位、AI 根因判断等当前未实现能力；远程保存只描述为用户主动配置的腾讯云 COS 直传。
+- [ ] 不填写自动修复、Rootline 云端同步、源码定位、AI 根因判断等当前未实现能力；远程保存只描述为用户主动配置的腾讯云 COS 或阿里云 OSS 直传。
 
 ## 3. Privacy 页
 
@@ -36,13 +36,13 @@ image.png# Rootline Chrome Web Store 发布清单
 - [ ] 逐项填写 `activeTab`、`tabs`、`scripting`、`storage`、`downloads`、`offscreen` 和 `alarms` 的理由。
 - [ ] Remote code 选择 `No, I am not using remote code.`。
 - [ ] 数据类别保守披露 Website content、Web history 和 User activity。
-- [ ] 准确披露：本地模式不传出设备；远程模式按用户指示直传其腾讯云 COS；数据不发送给开发者、不出售、不用于广告、信用或无关分析。
+- [ ] 准确披露：本地模式不传出设备；远程模式按用户指示直传其腾讯云 COS 或阿里云 OSS；数据不发送给开发者、不出售、不用于广告、信用或无关分析。
 - [ ] 填入公开隐私政策 URL。
 - [ ] 确认隐私政策、商店后台披露和实际代码行为一致。
 
 ## 4. 包内容和权限
 
-- [ ] 生产 Manifest 仅包含腾讯云 COS 的 `host_permissions`，不包含 `<all_urls>` 或无关 host。
+- [ ] 生产 Manifest 仅包含腾讯云 COS 和阿里云 OSS 的 `host_permissions`，不包含 `<all_urls>` 或无关 host。
 - [ ] 生产 Manifest 不包含 `<all_urls>`、cookies、webRequest、debugger、desktopCapture。
 - [ ] 没有远程 JavaScript、WebAssembly、`eval`、动态下载可执行代码或外部字体请求。
 - [ ] 没有开发服务器地址、测试密钥、账号、Cookie、私钥或本机绝对源码路径进入 ZIP。
@@ -61,7 +61,7 @@ image.png# Rootline Chrome Web Store 发布清单
 - [ ] 录屏需要系统选择器确认、不录音、停止后生成 `capture.webm`。
 - [ ] Chrome 内部页、商店页和 PDF 显示明确不可采集提示。
 - [ ] 断网状态仍可生成本地报告。
-- [ ] COS 远程模式只在用户配置并主动选择后请求腾讯云；独立配置弹窗权限提示包含“公有读、私有写”，不建议公有读写；不把 CAM 子用户列为强制前置条件。
+- [ ] 远程模式只在用户配置并主动选择后请求腾讯云 COS 或阿里云 OSS；独立配置弹窗提示“公有读、私有写”，不建议公有读写；子用户是安全建议而非强制前置条件。
 - [ ] 采集历史可查看、复制和重新导出。
 
 ## 6. 自动化门禁
@@ -86,7 +86,7 @@ pnpm zip
 - [ ] 把 `reviewer-notes.md` 的英文说明和复现步骤填入审核备注。
 - [ ] 标注不需要测试账号。
 - [ ] 说明录屏选择器必须由审核人员手动确认。
-- [ ] 说明本地输出进入 Chrome Downloads，远程输出只进入用户配置的腾讯云 COS。
+- [ ] 说明本地输出进入 Chrome Downloads，远程输出只进入用户配置的腾讯云 COS 或阿里云 OSS。
 - [ ] 提交后保留本次 ZIP、版本号、商店文案和隐私政策快照，便于回滚与答复审核。
 
 ## 8. 发布后回归

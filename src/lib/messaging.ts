@@ -10,6 +10,8 @@ import type {
   RecordingSessionState,
   SelectedTarget,
   SessionSummary,
+  RemoteStorageConfig,
+  RemoteProvider,
   TencentCosConfig,
 } from "./types"
 import type { CaptureSaveConfig } from "./remote-config"
@@ -32,6 +34,9 @@ export type ExtensionRequest =
   | { type: "GET_SESSION"; sessionId: string }
   | { type: "GET_SAVE_CONFIG" }
   | { type: "SET_SAVE_MODE"; mode: CaptureSaveMode }
+  | { type: "SAVE_REMOTE_CONFIG"; config: RemoteStorageConfig }
+  | { type: "TEST_REMOTE_CONFIG"; config: RemoteStorageConfig }
+  | { type: "CLEAR_REMOTE_CONFIG"; provider: "tencent-cos" | "aliyun-oss" }
   | { type: "SAVE_COS_CONFIG"; config: TencentCosConfig }
   | { type: "TEST_COS_CONFIG"; config: TencentCosConfig }
   | { type: "CLEAR_COS_CONFIG" }
@@ -62,12 +67,17 @@ export interface OffscreenWriteRequest {
 export interface OffscreenWriteRemoteRequest {
   type: "OFFSCREEN_WRITE_REMOTE_SESSION"
   session: RootlineSession
-  config: TencentCosConfig
+  config: RemoteStorageConfig
 }
 
 export interface OffscreenTestCosRequest {
   type: "OFFSCREEN_TEST_COS"
   config: TencentCosConfig
+}
+
+export interface OffscreenTestRemoteRequest {
+  type: "OFFSCREEN_TEST_REMOTE"
+  config: RemoteStorageConfig
 }
 
 export interface OffscreenReexportRequest {
@@ -105,7 +115,7 @@ export type TabRuntimeRequest =
   | { type: "ROOTLINE_SET_SELECTION"; enabled: boolean }
   | { type: "ROOTLINE_CAPTURE_SNAPSHOT" }
   | { type: "ROOTLINE_PREPARE_FINISH" }
-  | { type: "ROOTLINE_SHOW_FINISH_PROGRESS"; saveMode: CaptureSaveMode }
+  | { type: "ROOTLINE_SHOW_FINISH_PROGRESS"; saveMode: CaptureSaveMode; provider?: RemoteProvider }
   | { type: "ROOTLINE_UPDATE_FINISH_PROGRESS"; progress: RemoteSaveProgress }
   | { type: "ROOTLINE_ABORT_FINISH" }
   | { type: "ROOTLINE_COMMIT_FINISH" }

@@ -28,8 +28,8 @@ const steps = [
   ["复现问题", "回到网页重新触发问题，确保相关日志和请求发生在采集窗口内。"],
   ["选择并标注", "使用右下角工具条点击关键元素，就地填写实际表现与期望结果；按 Escape 可退出。"],
   ["继续采集", "保存后继续选择，也可以点击编号重编辑，或使用撤销和清空。"],
-  ["保存位置", "默认写入 Chrome 下载目录下的 Rootline 文件夹，也可以在 Popup 切换到远程并打开独立窗口配置腾讯云 COS。"],
-  ["交给 AI", "本地模式复制本地路径；远程模式复制已经生成的 COS 报告链接，不会重复上传。"],
+  ["保存位置", "默认写入 Chrome 下载目录下的 Rootline 文件夹，也可以在 Popup 切换到远程并打开独立窗口配置腾讯云 COS 或阿里云 OSS。"],
+  ["交给 AI", "本地模式复制本地路径；远程模式复制已经生成的对象存储报告链接，不会重复上传。"],
 ]
 
 export function InstructionsApp() {
@@ -80,7 +80,7 @@ export function InstructionsApp() {
             </article>
             <article>
               <HardDrive aria-hidden="true" size={20} />
-              <div><h3>本地或远程保存</h3><p>本地模式写入 Downloads/Rootline；远程模式直接写入你的腾讯云 COS。推荐“公有读、私有写”，不要使用公有读写。请同时关闭 COS 的“强制下载/下载文件”设置，否则 report.html 会被浏览器直接下载而不是打开；CORS 建议暴露 Content-Disposition、Content-Type、Content-Length、ETag。可以使用已有腾讯云密钥，不强制创建子用户，但最小权限 CAM 子用户更安全。</p></div>
+              <div><h3>本地或远程保存</h3><p>本地模式写入 Downloads/Rootline；远程模式直接写入你自己的腾讯云 COS 或阿里云 OSS。推荐“公有读、私有写”，不要使用公有读写。请关闭对象存储的“强制下载/下载文件”设置，否则 report.html 会被浏览器直接下载；CORS 建议暴露 Content-Disposition、Content-Type、Content-Length、ETag。</p></div>
             </article>
             <article>
               <Cookie aria-hidden="true" size={20} />
@@ -104,7 +104,7 @@ export function InstructionsApp() {
         </section>
 
         <footer className="instructions-footer">
-          <Play aria-hidden="true" size={16} /><span>Rootline 不调用模型，也不会向 Rootline 服务器上传数据；远程模式只写入你自己的 COS。</span><Code2 aria-hidden="true" size={16} />
+          <Play aria-hidden="true" size={16} /><span>Rootline 不调用模型，也不会向 Rootline 服务器上传数据；远程模式只写入你自己的对象存储。</span><Code2 aria-hidden="true" size={16} />
         </footer>
       </div>
     </main>

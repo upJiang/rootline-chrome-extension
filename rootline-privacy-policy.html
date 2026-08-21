@@ -173,7 +173,7 @@
       <header class="hero">
         <div class="brand"><span class="brand-mark">R</span><span>Rootline</span></div>
         <h1>隐私政策</h1>
-        <p class="lead">Rootline 仅在用户主动操作后采集当前网页的运行态证据。报告默认保存在用户本机；用户主动选择远程模式后，才会直接上传到用户自己的腾讯云 COS，Rootline 不接收这些数据。</p>
+        <p class="lead">Rootline 仅在用户主动操作后采集当前网页的运行态证据。报告默认保存在用户本机；用户主动选择远程模式后，才会直接上传到用户自己的腾讯云 COS 或阿里云 OSS，Rootline 不接收这些数据。</p>
       </header>
 
       <article class="document">
@@ -183,12 +183,12 @@
           <div><span>联系邮箱</span><b><a href="mailto:junfengjiang1@gmail.com">junfengjiang1@gmail.com</a></b></div>
         </div>
 
-        <p>本隐私政策说明 Rootline Chrome 扩展如何处理用户数据。Rootline 的单一用途是在用户主动操作后采集当前网页的运行态证据，并生成调试报告。报告默认保存在用户本机；用户主动选择远程模式后，才会直接上传到用户自己的腾讯云 COS。</p>
+        <p>本隐私政策说明 Rootline Chrome 扩展如何处理用户数据。Rootline 的单一用途是在用户主动操作后采集当前网页的运行态证据，并生成调试报告。报告默认保存在用户本机；用户主动选择远程模式后，才会直接上传到用户自己的腾讯云 COS 或阿里云 OSS。</p>
 
         <h2>1. 核心原则</h2>
         <ul>
           <li>Rootline 不提供账号、开发者云端存储、广告、统计分析或 AI API。</li>
-          <li>本地模式不上传报告、截图、录屏、网页内容、文件路径或历史索引；远程模式只直接上传到用户主动配置的腾讯云 COS。</li>
+          <li>本地模式不上传报告、截图、录屏、网页内容、文件路径或历史索引；远程模式只直接上传到用户主动配置的腾讯云 COS 或阿里云 OSS。</li>
           <li>采集只在用户点击“开始标注”或“录制页面”后开始。</li>
           <li>用户可以在结束前放弃采集，也可以在系统文件管理器中删除已导出的文件。</li>
         </ul>
@@ -238,21 +238,21 @@ session_id</pre>
         <ul>
           <li>活动采集会话保存在 <code>chrome.storage.session</code>，更新时间超过 24 小时后会自动清理，并且不会作为云端历史同步。</li>
           <li>浮动面板位置和录屏进行中状态保存在 <code>chrome.storage.local</code>。</li>
-          <li>用户配置的 COS 凭证保存在 <code>chrome.storage.local</code>，仅用于直接上传到用户的 COS，不会进入报告或发送给 Rootline。</li>
+          <li>用户配置的 COS 或 OSS 凭证保存在 <code>chrome.storage.local</code>，仅用于直接上传到用户自己的对象存储，不会进入报告或发送给 Rootline。</li>
           <li>报告历史索引和标注截图缓存保存在扩展 IndexedDB，用于采集历史和完整证据页。</li>
-          <li>录屏 Blob 和关键帧在成功写入本地文件或用户 COS 前暂存在扩展 IndexedDB；成功保存后对应临时录屏结果会清理。</li>
+          <li>录屏 Blob 和关键帧在成功写入本地文件或用户对象存储前暂存在扩展 IndexedDB；成功保存后对应临时录屏结果会清理。</li>
           <li>完成后的 <code>report.md</code>、<code>report.json</code>、<code>capture.png</code> 和可选 <code>capture.webm</code> 默认保存在 Chrome 下载目录下的 <code>Rootline/</code>。</li>
           <li>远程模式生成内嵌截图的 <code>report.html</code> 和可选 <code>capture.webm</code>，直接上传到用户配置的 COS，不额外生成本地备份；扩展 IndexedDB 仍保留历史索引、结构化报告和标注截图缓存。</li>
         </ul>
         <p>Rootline 不会自动删除用户下载目录中的报告。用户可以在系统文件管理器中删除文件，也可以通过 Chrome 的扩展管理页清除 Rootline 的站点数据或卸载扩展，以删除扩展存储和 IndexedDB 中的本地索引。</p>
 
         <h2>6. 数据共享和传输</h2>
-        <p>Rootline 不把用户数据传输到开发者服务器，也不出售、出租、共享或交换用户数据。Rootline 不包含广告 SDK、分析 SDK、远程日志、崩溃上报、账号系统或 Rootline 云端同步。用户主动选择远程模式时，数据只会直接发送到用户配置的腾讯云 COS。</p>
-        <p>腾讯云 COS 是由用户自行选择和管理的第三方存储，其数据处理适用用户与腾讯云之间的协议。使用“公有读、私有写”时，任何获得完整报告链接的人都可能读取对应对象；用户应妥善控制链接传播范围，并建议通过随机目录名和 7 天或 30 天生命周期降低暴露风险。</p>
+        <p>Rootline 不把用户数据传输到开发者服务器，也不出售、出租、共享或交换用户数据。Rootline 不包含广告 SDK、分析 SDK、远程日志、崩溃上报、账号系统或 Rootline 云端同步。用户主动选择远程模式时，数据只会直接发送到用户配置的腾讯云 COS 或阿里云 OSS。</p>
+        <p>腾讯云 COS 和阿里云 OSS 是由用户自行选择和管理的第三方存储，其数据处理适用用户与相应云服务商之间的协议。使用“公有读、私有写”时，任何获得完整报告链接的人都可能读取对应对象；用户应妥善控制链接传播范围，并建议通过随机目录名和 7 天或 30 天生命周期降低暴露风险。</p>
         <p>当用户复制 AI 上下文时，Rootline 只把文本写入本机剪贴板。用户自行将该文本或本地文件交给 Codex、Claude Code、Cursor 或其他第三方工具时，该第三方工具将按其自己的隐私政策处理数据，Rootline 无法控制该行为。</p>
 
         <h2>7. Chrome 权限的使用</h2>
-        <p>Rootline 使用 <code>activeTab</code>、<code>tabs</code>、<code>scripting</code>、<code>storage</code>、<code>downloads</code>、<code>offscreen</code> 和 <code>alarms</code> 权限完成用户发起的采集、截图、录屏和本地保存；使用 <code>https://*.myqcloud.com/*</code> host permission 完成用户主动配置后的远程上传。Rootline 不申请全站永久访问、Cookie、webRequest、debugger 或浏览历史权限。</p>
+        <p>Rootline 使用 <code>activeTab</code>、<code>tabs</code>、<code>scripting</code>、<code>storage</code>、<code>downloads</code>、<code>offscreen</code> 和 <code>alarms</code> 权限完成用户发起的采集、截图、录屏和本地保存；使用 <code>https://*.myqcloud.com/*</code> 和 <code>https://*.aliyuncs.com/*</code> host permission 完成用户主动配置后的远程上传。Rootline 不申请全站永久访问、Cookie、webRequest、debugger 或浏览历史权限。</p>
 
         <h2>8. 儿童隐私</h2>
         <p>Rootline 面向软件开发人员，不面向儿童，也不会有意收集儿童个人信息。</p>
@@ -261,12 +261,12 @@ session_id</pre>
         <p>Rootline 采用默认本地保存、用户自有 COS 直传、权限按需使用、字段脱敏、内容截断、消息来源校验和会话校验来降低风险。但任何软件都不能保证绝对安全，用户应妥善管理下载目录、COS 公开链接、剪贴板和共享给第三方工具的文件。</p>
 
         <h2>10. 政策更新</h2>
-        <p>如果 Rootline 的数据处理方式、权限或功能发生实质变化，本政策将更新生效日期，并在发布新版本前同步更新 Chrome Web Store 的隐私披露。远程 COS 是用户主动配置的第三方存储，Rootline 不提供该存储服务；新增其他云端供应商时，会在启用前另行说明。</p>
+        <p>如果 Rootline 的数据处理方式、权限或功能发生实质变化，本政策将更新生效日期，并在发布新版本前同步更新 Chrome Web Store 的隐私披露。远程对象存储是用户主动配置的第三方服务，Rootline 不提供该存储服务。</p>
 
         <h2>11. 联系方式</h2>
         <p>有关本政策或 Rootline 数据处理的问题，请联系 <a href="mailto:junfengjiang1@gmail.com">junfengjiang1@gmail.com</a>。</p>
 
-        <div class="notice"><span class="label">Chrome Web Store Limited Use：</span>Rootline 对用户数据的使用仅限于提供其单一用途：在用户主动操作后采集当前网页的运行态证据，并生成调试报告。Rootline 不出售数据，不将数据用于广告、画像、信用评估或与该用途无关的分析，也不把数据传输给开发者；远程模式仅按用户主动配置直接写入用户自己的腾讯云 COS。</div>
+        <div class="notice"><span class="label">Chrome Web Store Limited Use：</span>Rootline 对用户数据的使用仅限于提供其单一用途：在用户主动操作后采集当前网页的运行态证据，并生成调试报告。Rootline 不出售数据，不将数据用于广告、画像、信用评估或与该用途无关的分析，也不把数据传输给开发者；远程模式仅按用户主动配置直接写入用户自己的腾讯云 COS 或阿里云 OSS。</div>
 
         <p class="footer">本页面是 Rootline 项目根目录中的隐私政策发布源文件。将它部署到公开 HTTPS 地址后，把最终 URL 填入 Chrome Web Store Developer Dashboard；不要把本地文件路径直接填入商店后台。</p>
       </article>

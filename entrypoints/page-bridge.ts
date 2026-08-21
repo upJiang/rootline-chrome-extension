@@ -9,6 +9,7 @@ import type {
   ReactRuntimeHint,
   RecordingEvidence,
   RecordingSessionState,
+  RemoteProvider,
   RootlineSession,
   SelectedTarget,
 } from "../src/lib/types"
@@ -1411,7 +1412,7 @@ function abortFinish(): void {
   syncMarkers()
 }
 
-function showFinishProgress(saveMode: CaptureSaveMode): void {
+function showFinishProgress(saveMode: CaptureSaveMode, provider?: RemoteProvider): void {
   const host = state.host
   const shadow = state.shadow
   if (!host || !shadow) return
@@ -1424,15 +1425,16 @@ function showFinishProgress(saveMode: CaptureSaveMode): void {
   shadow.querySelector<HTMLElement>("[data-complete]")?.setAttribute("hidden", "")
   const progress = shadow.querySelector<HTMLElement>("[data-finish-progress]")
   const progressText = shadow.querySelector<HTMLElement>("[data-finish-progress-text]")
+  const remoteName = provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"
   if (progressText) {
     progressText.textContent = saveMode === "remote"
-      ? "截图已生成，正在上传到腾讯云 COS…"
+      ? `截图已生成，正在上传到${remoteName}…`
       : "截图已生成，正在保存到浏览器下载目录…"
   }
   if (progress) progress.hidden = false
   const hint = shadow.querySelector<HTMLElement>("[data-panel-hint]")
   if (hint) hint.textContent = saveMode === "remote"
-    ? "截图已完成，正在等待腾讯云 COS 返回结果。"
+    ? `截图已完成，正在等待${remoteName}返回结果。`
     : "截图已完成，正在写入本机文件。"
   shadow.querySelectorAll<HTMLButtonElement>("[data-select], [data-mode], [data-undo], [data-clear], [data-cancel], [data-finish]")
     .forEach((button) => { button.disabled = true })
@@ -1513,7 +1515,7 @@ function showComplete(session: RootlineSession): void {
   remoteActions?.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
     button.hidden = !session.remoteArtifacts
   })
-  setFeedback(session.remoteArtifacts ? "本次证据已上传到你的腾讯云 COS。" : `本次证据已保存到 ${destination}。`, "success")
+  setFeedback(session.remoteArtifacts ? `本次证据已上传到你的${session.remoteArtifacts.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。` : `本次证据已保存到 ${destination}。`, "success")
   state.shadow?.querySelector<HTMLButtonElement>("[data-open-review]")?.focus()
 }
 
@@ -1892,7 +1894,7 @@ function installBridge(): void {
       void prepareFinish().then(sendResponse)
       return true
     }
-    if (message.type === "ROOTLINE_SHOW_FINISH_PROGRESS") showFinishProgress(message.saveMode)
+    if (message.type === "ROOTLINE_SHOW_FINISH_PROGRESS") showFinishProgress(message.saveMode, message.provider)
     if (message.type === "ROOTLINE_UPDATE_FINISH_PROGRESS") updateFinishProgress(message.progress)
     if (message.type === "ROOTLINE_ABORT_FINISH") abortFinish()
     if (message.type === "ROOTLINE_COMMIT_FINISH") commitFinish()

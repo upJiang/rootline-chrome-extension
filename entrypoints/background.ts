@@ -8,6 +8,7 @@ import type {
   OffscreenReexportRemoteRequest,
   OffscreenReexportRequest,
   OffscreenTestCosRequest,
+  OffscreenTestRemoteRequest,
   OffscreenWriteRemoteRequest,
   OffscreenWriteRequest,
   RuntimeSnapshotResponse,
@@ -32,7 +33,7 @@ import {
 import { isOffscreenRecordingEndedMessage, RECORDING_MAX_DURATION_ALARM } from "../src/lib/recording-messages"
 import { normalizeRecordingMaxDurationMs } from "../src/lib/recording-settings"
 import { redactText, redactUrl, truncateText } from "../src/lib/redaction"
-import { clearTencentCosConfig, normalizeTencentCosConfig, readCaptureSaveConfig, saveTencentCosConfig, setCaptureSaveMode } from "../src/lib/remote-config"
+import { activeRemoteConfig, clearAliyunOssConfig, clearTencentCosConfig, normalizeAliyunOssConfig, normalizeTencentCosConfig, readCaptureSaveConfig, saveAliyunOssConfig, saveTencentCosConfig, setCaptureSaveMode } from "../src/lib/remote-config"
 import { buildRemoteAiContext, buildReportMarkdown, createReport } from "../src/lib/report"
 import {
   cleanExpiredSessions,
@@ -58,6 +59,8 @@ import {
   type RootlineReportV1,
   type RootlineSession,
   type TencentCosConfig,
+  type RemoteStorageConfig,
+  type AliyunOssConfig,
 } from "../src/lib/types"
 
 const UNSUPPORTED_PAGE_MESSAGE = "Rootline 只能采集普通 HTTP/HTTPS 网页；Chrome 内部页、扩展商店和 PDF 不支持注入采集器。"
@@ -171,7 +174,7 @@ async function startSession(
   }
   if (existing && ["reviewing", "exported"].includes(existing.status)) return existing
   const saveConfig = await readCaptureSaveConfig()
-  if (saveConfig.mode === "remote" && !saveConfig.remote) throw new Error("请先配置腾讯云 COS。")
+  if (saveConfig.mode === "remote" && !activeRemoteConfig(saveConfig)) throw new Error(`请先配置${saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。`)
   const session = createSession(tab, captureMode, saveConfig.mode)
   await saveSession(session)
   try {
@@ -208,7 +211,7 @@ async function reannotateSession(sessionId: string, senderTabId?: number): Promi
   const currentTab = await chrome.tabs.get(tabId)
   if (!supportedUrl(currentTab.url)) throw new Error(UNSUPPORTED_PAGE_MESSAGE)
   const saveConfig = await readCaptureSaveConfig()
-  if (saveConfig.mode === "remote" && !saveConfig.remote) throw new Error("请先配置腾讯云 COS。")
+  if (saveConfig.mode === "remote" && !activeRemoteConfig(saveConfig)) throw new Error(`请先配置${saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。`)
   const session = createSession(currentTab, "screenshot", saveConfig.mode)
   await sendToTab(tabId, { type: "ROOTLINE_CLEANUP" })
   await saveSession(session)
@@ -242,13 +245,14 @@ async function writeSessionOffscreen(session: RootlineSession): Promise<{
   await ensureRootlineOffscreenDocument()
   if (session.saveMode === "remote") {
     const saveConfig = await readCaptureSaveConfig()
-    if (!saveConfig.remote) throw new Error("腾讯云 COS 配置不存在，请重新配置后重试。")
+    const config = activeRemoteConfig(saveConfig)
+    if (!config) throw new Error(`${saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"} 配置不存在，请重新配置后重试。`)
     const response = (await chrome.runtime.sendMessage({
       type: "OFFSCREEN_WRITE_REMOTE_SESSION",
       session,
-      config: saveConfig.remote,
+      config,
     } satisfies OffscreenWriteRemoteRequest)) as ExtensionResponse<{ report: RootlineReportV1; location: RemoteArtifactLocation }>
-    if (!response?.ok || !response.data) throw new Error(response?.error ?? "腾讯云 COS 上传失败。")
+    if (!response?.ok || !response.data) throw new Error(response?.error ?? "远程对象存储上传失败。")
     return { report: response.data.report, remoteLocation: response.data.location }
   }
   const response = (await chrome.runtime.sendMessage({
@@ -337,6 +341,7 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
       await sendToTab(current.tabId, {
         type: "ROOTLINE_SHOW_FINISH_PROGRESS",
         saveMode: current.saveMode ?? "local",
+        ...(current.saveMode === "remote" ? { provider: (await readCaptureSaveConfig()).provider ?? "tencent-cos" } : {}),
       })
       const written = await writeSessionOffscreen({ ...current, status: "reviewing" })
       if (written.localLocation) current.localArtifacts = written.localLocation
@@ -432,6 +437,21 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
   if (message.type === "GET_SAVE_CONFIG") return { ok: true, data: await readCaptureSaveConfig() }
   if (message.type === "SET_SAVE_MODE") return { ok: true, data: await setCaptureSaveMode(message.mode) }
   if (message.type === "CLEAR_COS_CONFIG") return { ok: true, data: await clearTencentCosConfig() }
+  if (message.type === "CLEAR_REMOTE_CONFIG") return { ok: true, data: message.provider === "aliyun-oss" ? await clearAliyunOssConfig() : await clearTencentCosConfig() }
+  if (message.type === "SAVE_REMOTE_CONFIG") {
+    if (message.config.provider === "aliyun-oss") return { ok: true, data: await saveAliyunOssConfig(normalizeAliyunOssConfig(message.config)) }
+    return { ok: true, data: await saveTencentCosConfig(normalizeTencentCosConfig(message.config)) }
+  }
+  if (message.type === "TEST_REMOTE_CONFIG") {
+    const config = message.config.provider === "aliyun-oss" ? normalizeAliyunOssConfig(message.config) : normalizeTencentCosConfig(message.config)
+    await ensureRootlineOffscreenDocument()
+    const response = (await chrome.runtime.sendMessage({ type: "OFFSCREEN_TEST_REMOTE", config } satisfies OffscreenTestRemoteRequest)) as ExtensionResponse<RemoteStorageConfig>
+    if (!response?.ok) throw new Error(response?.error ?? "远程对象存储连接测试失败。")
+    const verified = response.data as RemoteStorageConfig
+    if (verified.provider === "aliyun-oss") await saveAliyunOssConfig(verified)
+    else await saveTencentCosConfig(verified)
+    return { ok: true, data: verified }
+  }
   if (message.type === "SAVE_COS_CONFIG") {
     return { ok: true, data: await saveTencentCosConfig(normalizeTencentCosConfig(message.config)) }
   }
@@ -581,7 +601,7 @@ export default defineBackground(() => {
       return true
     }
     const type = (message as { type?: string }).type
-    if (type === "OFFSCREEN_WRITE_SESSION" || type === "OFFSCREEN_WRITE_REMOTE_SESSION" || type === "OFFSCREEN_REEXPORT_RECORD" || type === "OFFSCREEN_REEXPORT_REMOTE_RECORD" || type === "OFFSCREEN_TEST_COS") return false
+    if (type === "OFFSCREEN_WRITE_SESSION" || type === "OFFSCREEN_WRITE_REMOTE_SESSION" || type === "OFFSCREEN_REEXPORT_RECORD" || type === "OFFSCREEN_REEXPORT_REMOTE_RECORD" || type === "OFFSCREEN_TEST_COS" || type === "OFFSCREEN_TEST_REMOTE") return false
     if (type === "OFFSCREEN_REMOTE_SAVE_PROGRESS") {
       const request = message as OffscreenRemoteSaveProgressMessage
       if (sender.id !== chrome.runtime.id || typeof request.sessionId !== "string") {

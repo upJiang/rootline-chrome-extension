@@ -108,7 +108,7 @@ const localArtifactsSchema = z.object({
   savedAt: z.string(),
 })
 const remoteArtifactsSchema = z.object({
-  provider: z.literal("tencent-cos"),
+  provider: z.enum(["tencent-cos", "aliyun-oss"]),
   objectPrefix: z.string(),
   reportUrl: z.string().url(),
   recordingUrl: z.string().url().optional(),
@@ -476,7 +476,7 @@ async function rewriteDownloadedRecord(record: CaptureRecord, report: RootlineRe
 
 async function rewriteRecord(directoryName: string, issue?: RootlineIssue): Promise<CaptureRecord> {
   const record = await readCaptureRecord(directoryName)
-  if (!record.location) throw new Error("该记录是远程报告，请使用腾讯云 COS 重新导出。")
+  if (!record.location) throw new Error("该记录是远程报告，请在远程保存配置中选择原来的云服务商后重新导出。")
   if (issue && record.report.issue.description === issue.description
     && record.report.issue.expectedResult === issue.expectedResult
     && record.report.issue.notes === issue.notes) {

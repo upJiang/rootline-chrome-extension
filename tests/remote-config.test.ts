@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { clearTencentCosConfig, normalizeTencentCosConfig, readCaptureSaveConfig, saveTencentCosConfig, setCaptureSaveMode } from "../src/lib/remote-config"
+import { clearTencentCosConfig, normalizeAliyunOssConfig, normalizeTencentCosConfig, readCaptureSaveConfig, saveAliyunOssConfig, saveTencentCosConfig, setCaptureSaveMode } from "../src/lib/remote-config"
 
 const localStore: Record<string, unknown> = {}
 
@@ -53,5 +53,18 @@ describe("remote save config", () => {
     expect((await clearTencentCosConfig()).mode).toBe("local")
     expect((await readCaptureSaveConfig()).remote).toBeUndefined()
   })
-})
 
+  it("migrates legacy Tencent remote config and preserves it when Aliyun is saved", async () => {
+    const tencent = normalizeTencentCosConfig({ bucket: "rootline-1250000000", region: "ap-guangzhou", secretId: "AKID-test-value", secretKey: "secret-value", objectPrefix: "rootline/" })
+    localStore["rootline:capture-save-config"] = { mode: "remote", remote: tencent }
+    const migrated = await readCaptureSaveConfig()
+    expect(migrated.provider).toBe("tencent-cos")
+    expect(migrated.tencentCos?.bucket).toBe("rootline-1250000000")
+    const aliyun = normalizeAliyunOssConfig({ bucket: "rootline-evidence", region: "cn-guangzhou", accessKeyId: "LTAI-test-value", accessKeySecret: "secret-value", objectPrefix: "rootline/" })
+    await saveAliyunOssConfig(aliyun)
+    const saved = await readCaptureSaveConfig()
+    expect(saved.provider).toBe("aliyun-oss")
+    expect(saved.aliyunOss?.bucket).toBe("rootline-evidence")
+    expect(saved.tencentCos?.bucket).toBe("rootline-1250000000")
+  })
+})

@@ -125,6 +125,7 @@ export interface ScreenshotEvidence {
 
 export type CaptureMode = "screenshot" | "video"
 export type CaptureSaveMode = "local" | "remote"
+export type RemoteProvider = "tencent-cos" | "aliyun-oss"
 export type RecordingLifecycleStatus = "starting" | "recording" | "stopped" | "failed"
 
 export interface TencentCosConfig {
@@ -139,8 +140,22 @@ export interface TencentCosConfig {
   verifiedAt?: string
 }
 
+export interface AliyunOssConfig {
+  provider: "aliyun-oss"
+  bucket: string
+  region: string
+  accessKeyId: string
+  accessKeySecret: string
+  objectPrefix: string
+  publicBaseUrl?: string
+  configuredAt: string
+  verifiedAt?: string
+}
+
+export type RemoteStorageConfig = TencentCosConfig | AliyunOssConfig
+
 export interface RemoteArtifactLocation {
-  provider: "tencent-cos"
+  provider: RemoteProvider
   objectPrefix: string
   reportUrl: string
   recordingUrl?: string
