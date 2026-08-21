@@ -19,8 +19,8 @@ Chrome Web Store 要求至少一张 `1280 × 800` 截图，最多 5 张。当前
 
 ## 4. `screenshots/04-copy-ai-context.png`
 
-- 标题：复制包含本地路径或 COS 链接的 AI 上下文
-- 说明：本地模式上下文包含安全边界、证据缺口和本机报告/截图路径；远程模式复用已生成的 COS 报告链接，可交给 Codex、Claude Code 或 Cursor 继续定位。
+- 标题：复制包含本地路径或远程链接的 AI 上下文
+- 说明：本地模式上下文包含安全边界、证据缺口和本机报告/截图路径；远程模式复用已生成的腾讯云 COS 或阿里云 OSS 报告链接，可交给 Codex、Claude Code 或 Cursor 继续定位。
 
 ## 5. `screenshots/05-capture-history.png`
 

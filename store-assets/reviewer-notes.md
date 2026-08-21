@@ -19,7 +19,7 @@ The extension saves local-mode artifacts under the user's Chrome Downloads direc
 5. 点击任意页面元素，确认目标后填写“实际结果”和“预期结果”，然后点击“确定”。
 6. 点击“结束并生成证据”。Rootline 会先隐藏自身浮层，再截取当前可见页面。
 7. 完成面板会显示“本次证据已生成”。点击“查看本次完整证据”查看截图、元素、控制台、网络、环境和 AI 上下文。
-8. 本地模式在 Chrome 下载目录的 `Rootline/` 下可以看到本次独立目录及本地文件；远程模式会显示 COS 报告链接。
+8. 本地模式在 Chrome 下载目录的 `Rootline/` 下可以看到本次独立目录及本地文件；远程模式会显示腾讯云 COS 或阿里云 OSS 报告链接。
 
 ### 可选录屏
 
