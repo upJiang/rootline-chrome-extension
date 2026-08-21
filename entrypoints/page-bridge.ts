@@ -1254,11 +1254,39 @@ async function copyText(value: string): Promise<void> {
   }
 }
 
-function setCompletionBusy(action: "copy" | "export" | "reannotate" | null): void {
-  state.shadow?.querySelectorAll<HTMLButtonElement>("[data-complete-action]").forEach((button) => {
+function setCompletionBusy(action: "copy" | "copy-link" | "export" | "open-remote" | "reannotate" | null): void {
+  state.shadow?.querySelectorAll<HTMLButtonElement>("[data-complete-action], [data-remote-action]").forEach((button) => {
     button.disabled = action !== null
     button.dataset.state = button.dataset.action === action ? "loading" : "default"
   })
+}
+
+async function copyReportLink(): Promise<void> {
+  const reportUrl = state.completedSession?.remoteArtifacts?.reportUrl
+  if (!reportUrl) return
+  setCompletionBusy("copy-link")
+  setFeedback("")
+  try {
+    await copyText(reportUrl)
+    setFeedback("报告链接已复制，可直接粘贴到公司平台或浏览器打开。", "success")
+  } catch (error) {
+    setFeedback(error instanceof Error ? error.message : "报告链接复制失败。", "error")
+  } finally {
+    setCompletionBusy(null)
+  }
+}
+
+async function openRemoteReport(): Promise<void> {
+  if (!state.sessionId) return
+  setCompletionBusy("open-remote")
+  setFeedback("")
+  try {
+    await request({ type: "OPEN_REMOTE_REPORT_FROM_PAGE", sessionId: state.sessionId })
+  } catch (error) {
+    setFeedback(error instanceof Error ? error.message : "远程报告打开失败。", "error")
+  } finally {
+    setCompletionBusy(null)
+  }
 }
 
 async function copyContext(): Promise<void> {
@@ -1297,13 +1325,25 @@ function openReview(): void {
   if (state.sessionId) send({ type: "OPEN_REVIEW_FROM_PAGE", sessionId: state.sessionId })
 }
 
+function hideCompletionOverlay(): void {
+  const complete = state.shadow?.querySelector<HTMLElement>("[data-complete]")
+  if (complete) complete.hidden = true
+  // Keep the runtime listener alive while the background swaps sessions, but
+  // remove the visible completion UI immediately so the next capture starts
+  // with a clean page.
+  if (state.host) state.host.style.display = "none"
+}
+
 async function reannotate(): Promise<void> {
   if (!state.sessionId) return
+  const previous = state.completedSession
   setCompletionBusy("reannotate")
   setFeedback("")
+  hideCompletionOverlay()
   try {
     await request<RootlineSession>({ type: "REANNOTATE_SESSION", sessionId: state.sessionId })
   } catch (error) {
+    if (previous) showComplete(previous)
     setFeedback(error instanceof Error ? error.message : "重新标注失败。", "error")
     setCompletionBusy(null)
   }
@@ -1403,6 +1443,35 @@ function showFinishProgress(saveMode: CaptureSaveMode): void {
   }
 }
 
+function formatProgressBytes(value: number): string {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function updateFinishProgress(progress: import("../src/lib/messaging").RemoteSaveProgress): void {
+  const progressText = state.shadow?.querySelector<HTMLElement>("[data-finish-progress-text]")
+  const hint = state.shadow?.querySelector<HTMLElement>("[data-panel-hint]")
+  const finish = state.shadow?.querySelector<HTMLButtonElement>("[data-finish]")
+  const percent = typeof progress.percent === "number"
+    ? Math.max(0, Math.min(100, Math.round(progress.percent * 100)))
+    : null
+  const size = typeof progress.totalBytes === "number" && progress.totalBytes > 0
+    ? formatProgressBytes(progress.totalBytes)
+    : ""
+  const details = [percent === null ? "" : `${percent}%`, size].filter(Boolean).join(" · ")
+  const text = progress.stage === "rendering-capture"
+    ? "正在生成轻量标注截图…"
+    : progress.stage === "uploading-recording"
+      ? `正在上传录屏${details ? ` · ${details}` : ""}`
+      : progress.stage === "uploading-report"
+        ? `正在上传远程报告${details ? ` · ${details}` : ""}`
+        : "远程文件已上传，正在保存采集历史…"
+  if (progressText) progressText.textContent = text
+  if (hint) hint.textContent = text
+  if (finish) finish.textContent = progress.stage === "saving-history" ? "正在完成采集" : "正在上传证据"
+}
+
 function commitFinish(): void {
   state.abortController?.abort()
   state.abortController = null
@@ -1436,7 +1505,14 @@ function showComplete(session: RootlineSession): void {
   if (summary) summary.textContent = `${session.targets.length} 个元素 · ${session.console.length} 条控制台 · ${session.network.length} 条网络`
   const location = state.shadow?.querySelector<HTMLElement>("[data-complete-location]")
   const destination = session.remoteArtifacts?.reportUrl ?? session.localArtifacts?.directoryPath ?? "Chrome 下载目录/Rootline"
+  const locationLabel = state.shadow?.querySelector<HTMLElement>("[data-complete-location-label]")
   if (location) location.textContent = destination
+  if (locationLabel) locationLabel.textContent = session.remoteArtifacts ? "远程报告链接" : "文件保存位置"
+  const remoteActions = state.shadow?.querySelector<HTMLElement>("[data-remote-actions]")
+  remoteActions?.toggleAttribute("hidden", !session.remoteArtifacts)
+  remoteActions?.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    button.hidden = !session.remoteArtifacts
+  })
   setFeedback(session.remoteArtifacts ? "本次证据已上传到你的腾讯云 COS。" : `本次证据已保存到 ${destination}。`, "success")
   state.shadow?.querySelector<HTMLButtonElement>("[data-open-review]")?.focus()
 }
@@ -1572,9 +1648,9 @@ function createOverlay(): void {
       .complete-location { display: grid; gap: 4px; margin: 0; padding: 10px 11px; border: 1px solid var(--rl-rule); border-radius: 6px; background: var(--rl-paper-soft); }
       .complete-location span { color: var(--rl-muted); font-size: 11px; font-weight: 700; }
       .complete-location code { color: var(--rl-ink); font: 600 11px/1.45 var(--rl-mono); overflow-wrap: anywhere; }
-      .complete-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
-      .complete-actions button { min-height: 44px; padding: 0 12px; border: 1px solid var(--rl-rule); border-radius: 6px; background: #fff; color: var(--rl-ink); font-size: 13px; font-weight: 700; }
-      .complete-actions .primary { border-color: rgba(15,118,110,.3); background: var(--rl-accent); color: #fff; }
+      .complete-actions, .remote-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+      .complete-actions button, .remote-actions button { min-height: 44px; padding: 0 12px; border: 1px solid var(--rl-rule); border-radius: 6px; background: #fff; color: var(--rl-ink); font-size: 13px; font-weight: 700; }
+      .complete-actions .primary, .remote-actions .primary { border-color: rgba(15,118,110,.3); background: var(--rl-accent); color: #fff; }
       @media (hover: hover) and (pointer: fine) {
         .pending-toolbar button:hover:not(:disabled) { background: rgba(255,255,255,.18); }
         .pending-toolbar .confirm-target:hover:not(:disabled) { background: var(--rl-accent-hover); color: #fff; }
@@ -1583,7 +1659,7 @@ function createOverlay(): void {
         .mode-button:hover:not(:disabled) { border-color: var(--rl-rule); background: rgba(255,255,255,.7); color: var(--rl-copy); }
         .mode-button[data-active]:hover:not(:disabled) { border-color: var(--rl-rule); background: #fff; color: var(--rl-accent); }
         .tool-button:hover:not(:disabled) { border-color: var(--rl-rule-strong); background: #fff; color: var(--rl-ink); }
-        .finish-button:hover:not(:disabled), .editor-actions .confirm:hover:not(:disabled), .complete-actions .primary:hover:not(:disabled) { border-color: rgba(13,148,136,.5); background: var(--rl-accent-hover); color: #fff; }
+        .finish-button:hover:not(:disabled), .editor-actions .confirm:hover:not(:disabled), .complete-actions .primary:hover:not(:disabled), .remote-actions .primary:hover:not(:disabled) { border-color: rgba(13,148,136,.5); background: var(--rl-accent-hover); color: #fff; }
         .editor-actions .danger:hover:not(:disabled) { border-color: rgba(180,35,24,.28); background: var(--rl-error-soft); color: var(--rl-error); }
         .target-index:hover:not(:disabled) { border-color: #fff; background: var(--rl-accent-hover); color: #fff; }
         textarea:hover { background: var(--rl-paper-soft); }
@@ -1639,9 +1715,10 @@ function createOverlay(): void {
     <section aria-label="采集完成" class="complete" data-complete hidden>
       <div class="complete-head"><div><p class="eyebrow">采集完成</p><h2 class="complete-title">本次证据已生成</h2></div></div>
       <p class="complete-summary" data-complete-summary></p>
-      <p class="complete-location"><span>文件保存位置</span><code data-complete-location>Chrome 下载目录/Rootline</code></p>
+      <p class="complete-location"><span data-complete-location-label>文件保存位置</span><code data-complete-location>Chrome 下载目录/Rootline</code></p>
       <div aria-live="polite" class="feedback" data-complete-feedback hidden></div>
       <div class="complete-actions"><button class="primary" data-action="review" data-complete-action data-open-review type="button">查看本次完整证据</button><button data-action="reannotate" data-complete-action data-reannotate type="button">重新标注</button><button data-action="copy" data-complete-action data-copy-context type="button">复制 AI 上下文</button><button data-action="export" data-complete-action data-export-report type="button">重新导出报告</button></div>
+      <div class="remote-actions" data-remote-actions hidden><button class="primary" data-action="open-remote" data-remote-action data-open-remote-report hidden type="button">打开远程报告</button><button data-action="copy-link" data-remote-action data-copy-report-link hidden type="button">复制报告链接</button></div>
     </section>
     <div aria-live="polite" class="feedback workflow-feedback" data-workflow-feedback hidden></div>`
   document.documentElement.append(host)
@@ -1680,8 +1757,10 @@ function createOverlay(): void {
   shadow.querySelector("[data-save-annotation]")?.addEventListener("click", () => void saveEditor())
   shadow.querySelector("[data-remove-annotation]")?.addEventListener("click", removeEditedTarget)
   shadow.querySelector("[data-copy-context]")?.addEventListener("click", () => void copyContext())
+  shadow.querySelector("[data-copy-report-link]")?.addEventListener("click", () => void copyReportLink())
   shadow.querySelector("[data-export-report]")?.addEventListener("click", () => void exportReport())
   shadow.querySelector("[data-open-review]")?.addEventListener("click", openReview)
+  shadow.querySelector("[data-open-remote-report]")?.addEventListener("click", () => void openRemoteReport())
   shadow.querySelector("[data-reannotate]")?.addEventListener("click", () => void reannotate())
   const panel = shadow.querySelector<HTMLElement>("[data-panel]")
   const dragHandle = shadow.querySelector<HTMLElement>("[data-panel-drag-handle]")
@@ -1814,6 +1893,7 @@ function installBridge(): void {
       return true
     }
     if (message.type === "ROOTLINE_SHOW_FINISH_PROGRESS") showFinishProgress(message.saveMode)
+    if (message.type === "ROOTLINE_UPDATE_FINISH_PROGRESS") updateFinishProgress(message.progress)
     if (message.type === "ROOTLINE_ABORT_FINISH") abortFinish()
     if (message.type === "ROOTLINE_COMMIT_FINISH") commitFinish()
     if (message.type === "ROOTLINE_SHOW_COMPLETE") showComplete(message.session)

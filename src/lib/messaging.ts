@@ -14,6 +14,19 @@ import type {
 } from "./types"
 import type { CaptureSaveConfig } from "./remote-config"
 
+export type RemoteSaveStage =
+  | "rendering-capture"
+  | "uploading-recording"
+  | "uploading-report"
+  | "saving-history"
+
+export interface RemoteSaveProgress {
+  stage: RemoteSaveStage
+  loadedBytes?: number
+  totalBytes?: number
+  percent?: number
+}
+
 export type ExtensionRequest =
   | { type: "GET_ACTIVE_STATE"; tabId?: number }
   | { type: "GET_SESSION"; sessionId: string }
@@ -38,6 +51,7 @@ export type ExtensionRequest =
   | { type: "GET_AI_CONTEXT_FROM_PAGE"; sessionId: string }
   | { type: "EXPORT_FROM_PAGE"; sessionId: string; captureDataUrl?: string }
   | { type: "OPEN_REVIEW_FROM_PAGE"; sessionId: string }
+  | { type: "OPEN_REMOTE_REPORT_FROM_PAGE"; sessionId: string }
   | { type: "OPEN_HISTORY_FROM_PAGE" }
 
 export interface OffscreenWriteRequest {
@@ -72,6 +86,12 @@ export interface OffscreenDownloadRequest {
   url: string
 }
 
+export interface OffscreenRemoteSaveProgressMessage {
+  type: "OFFSCREEN_REMOTE_SAVE_PROGRESS"
+  sessionId: string
+  progress: RemoteSaveProgress
+}
+
 export type TabRuntimeRequest =
   | {
       type: "ROOTLINE_START"
@@ -86,6 +106,7 @@ export type TabRuntimeRequest =
   | { type: "ROOTLINE_CAPTURE_SNAPSHOT" }
   | { type: "ROOTLINE_PREPARE_FINISH" }
   | { type: "ROOTLINE_SHOW_FINISH_PROGRESS"; saveMode: CaptureSaveMode }
+  | { type: "ROOTLINE_UPDATE_FINISH_PROGRESS"; progress: RemoteSaveProgress }
   | { type: "ROOTLINE_ABORT_FINISH" }
   | { type: "ROOTLINE_COMMIT_FINISH" }
   | { type: "ROOTLINE_SHOW_COMPLETE"; session: RootlineSession }

@@ -585,7 +585,7 @@ test("defaults to Chrome Downloads and exposes optional Tencent COS settings", a
   await expect(settingsPage.getByText("访问权限请选择“公有读、私有写”", { exact: true })).toBeVisible()
   await expect(settingsPage.getByText(/不要选择“公有读写”/)).toBeVisible()
   await expect(settingsPage.getByText(/不需要填写子账号 ID/)).toBeVisible()
-  await expect(settingsPage.getByText(/QcloudCollApiKeyManageAccess/)).toBeVisible()
+  await expect(settingsPage.getByText(/QcloudCollApiKeyManageAccess/).first()).toBeVisible()
   await expect(settingsPage.getByRole("link", { name: "CAM 用户管理" })).toHaveAttribute("href", "https://console.cloud.tencent.com/cam/user")
   await expect(settingsPage.getByRole("link", { name: "API 密钥管理" })).toHaveAttribute("href", "https://console.cloud.tencent.com/cam/capi")
   const formCardColumns = await settingsPage.locator(".cos-settings-form-card").evaluate((element) => getComputedStyle(element).gridTemplateColumns)

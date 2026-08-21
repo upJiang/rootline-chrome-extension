@@ -38,5 +38,10 @@ describe("remote report", () => {
     expect(context).toContain("直接打开并读取")
     expect(context).not.toContain("SecretKey")
   })
-})
 
+  it("accepts a WebP screenshot without allowing arbitrary data URLs", () => {
+    const report = createReport(makeSession())
+    expect(buildRemoteReportHtml(report, "data:image/webp;base64,AAAA")).toContain("data:image/webp;base64,AAAA")
+    expect(buildRemoteReportHtml(report, "data:image/svg+xml;base64,AAAA")).not.toContain("data:image/svg+xml")
+  })
+})

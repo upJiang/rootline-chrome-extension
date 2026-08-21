@@ -1,4 +1,5 @@
 import type { RootlineSession, SessionSummary } from "./types"
+import { withoutScreenshotPayload } from "./screenshot-payload"
 
 const SESSION_PREFIX = "rootline:session:"
 const TAB_INDEX_KEY = "rootline:tab-index"
@@ -36,7 +37,7 @@ export function summarizeSession(session: RootlineSession): SessionSummary {
 }
 
 export async function saveSession(session: RootlineSession): Promise<void> {
-  await chrome.storage.session.set({ [sessionKey(session.id)]: session })
+  await chrome.storage.session.set({ [sessionKey(session.id)]: withoutScreenshotPayload(session) })
   tabIndexMutation = tabIndexMutation
     .catch(() => undefined)
     .then(async () => {
@@ -49,7 +50,7 @@ export async function saveSession(session: RootlineSession): Promise<void> {
 }
 
 async function saveSessionWithoutActivating(session: RootlineSession): Promise<void> {
-  await chrome.storage.session.set({ [sessionKey(session.id)]: session })
+  await chrome.storage.session.set({ [sessionKey(session.id)]: withoutScreenshotPayload(session) })
 }
 
 export async function readSession(id: string): Promise<RootlineSession | null> {

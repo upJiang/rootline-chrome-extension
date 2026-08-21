@@ -4,7 +4,9 @@ import {
   BookOpen,
   Camera,
   CircleStop,
+  ClipboardCopy,
   Cloud,
+  ExternalLink,
   HardDrive,
   History,
   LoaderCircle,
@@ -14,7 +16,7 @@ import {
   Trash2,
   Video,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "../../components/Brand"
 import { Notice } from "../../components/Notice"
 import type { ActiveState, ExtensionResponse } from "../../src/lib/messaging"
@@ -44,10 +46,27 @@ function withCompatibleDefaults(value: ActiveState): ActiveState {
   }
 }
 
+async function copyText(value: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(value)
+  } catch {
+    const textarea = document.createElement("textarea")
+    textarea.value = value
+    textarea.style.position = "fixed"
+    textarea.style.opacity = "0"
+    document.body.append(textarea)
+    textarea.select()
+    document.execCommand("copy")
+    textarea.remove()
+  }
+}
+
 export function PopupApp() {
   const [state, setState] = useState<ActiveState | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const successTimer = useRef<number | null>(null)
   const sourceTabId = useMemo(() => {
     const value = new URLSearchParams(window.location.search).get("sourceTabId")
     const parsed = value === null ? Number.NaN : Number(value)
@@ -67,8 +86,20 @@ export function PopupApp() {
   useEffect(() => {
     void refresh()
     const interval = window.setInterval(() => void refresh(), 1_000)
-    return () => window.clearInterval(interval)
+    return () => {
+      window.clearInterval(interval)
+      if (successTimer.current !== null) window.clearTimeout(successTimer.current)
+    }
   }, [refresh])
+
+  const showSuccess = (message: string) => {
+    if (successTimer.current !== null) window.clearTimeout(successTimer.current)
+    setSuccess(message)
+    successTimer.current = window.setTimeout(() => {
+      setSuccess(null)
+      successTimer.current = null
+    }, 3_000)
+  }
 
   const run = async (label: string, operation: () => Promise<void>) => {
     setBusy(label)
@@ -154,8 +185,40 @@ export function PopupApp() {
     window.close()
   })
 
+  const openRemoteReport = async () => {
+    const reportUrl = state?.session?.remoteArtifacts?.reportUrl
+    if (!reportUrl) return
+    setError(null)
+    try {
+      await chrome.tabs.create({ url: reportUrl })
+      window.close()
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "无法打开远程报告。")
+    }
+  }
+
+  const copyRemoteReportLink = async () => {
+    const reportUrl = state?.session?.remoteArtifacts?.reportUrl
+    if (!reportUrl) return
+    setError(null)
+    try {
+      await copyText(reportUrl)
+      showSuccess("报告链接已复制，可直接粘贴到公司平台或浏览器打开。")
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "报告链接复制失败。")
+    }
+  }
+
   const openReview = async () => {
     if (!state?.session) return
+    // Remote captures are already self-contained report.html artifacts. Open
+    // the COS URL directly so a missing browser history cache cannot turn a
+    // successful upload into a misleading red error page.
+    if (state.session.remoteArtifacts?.reportUrl) {
+      await chrome.tabs.create({ url: state.session.remoteArtifacts.reportUrl })
+      window.close()
+      return
+    }
     const remoteRecord = state.session.remoteArtifacts?.objectPrefix.split("/").filter(Boolean).at(-1)
     const record = state.session.localArtifacts?.directoryName ?? remoteRecord
     const url = record
@@ -205,6 +268,7 @@ export function PopupApp() {
       </section>
 
       {error ? <Notice title={error} tone="error" /> : null}
+      {success ? <Notice title={success} tone="success" /> : null}
       {!state?.supported && state?.unsupportedReason ? <Notice title="当前页面不可采集" tone="warning">{state.unsupportedReason}</Notice> : null}
 
       {state?.recording && state.recording.tabId !== state.tab?.id ? (
@@ -266,6 +330,16 @@ export function PopupApp() {
             {busy === "reannotate" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <RotateCcw aria-hidden="true" size={17} />}
             {busy === "reannotate" ? "正在连接页面" : "重新标注"}
           </button>
+          {session.remoteArtifacts ? (
+            <div className="remote-review-actions">
+              <button className="rl-button rl-button--primary" disabled={busy !== null} onClick={() => void openRemoteReport()} type="button">
+                <ExternalLink aria-hidden="true" size={17} />打开远程报告
+              </button>
+              <button className="rl-button" disabled={busy !== null} onClick={() => void copyRemoteReportLink()} type="button">
+                <ClipboardCopy aria-hidden="true" size={17} />复制报告链接
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : (
         <section className="space-y-3">

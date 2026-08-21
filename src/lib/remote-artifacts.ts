@@ -1,11 +1,13 @@
 import { readStoredCaptureRecord, saveStoredCaptureRecord } from "./capture-history-store"
 import { renderAnnotatedCapture } from "./export"
+import type { OffscreenRemoteSaveProgressMessage, RemoteSaveProgress } from "./messaging"
 import { readCaptureSaveConfig } from "./remote-config"
 import { buildRemoteReportHtml } from "./remote-report"
 import { createReport } from "./report"
 import { readRecordingResult } from "./recording-result-store"
 import { buildCosObjectUrl, deleteCosObject, joinCosKey, putCosObject } from "./tencent-cos"
 import { buildCaptureDirectoryName } from "./time"
+import { withoutScreenshotPayload } from "./screenshot-payload"
 import type {
   RemoteArtifactLocation,
   RootlineIssue,
@@ -16,6 +18,23 @@ import type {
 
 function captureDirectoryName(session: Pick<RootlineSession, "id" | "startedAt">): string {
   return buildCaptureDirectoryName(session.startedAt, session.id.slice(0, 8))
+}
+
+async function remoteStage<T>(label: string, operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "未知错误"
+    throw new Error(`${label}失败：${message}`, { cause: error })
+  }
+}
+
+function notifyRemoteProgress(sessionId: string, progress: RemoteSaveProgress): void {
+  void chrome.runtime.sendMessage({
+    type: "OFFSCREEN_REMOTE_SAVE_PROGRESS",
+    sessionId,
+    progress,
+  } satisfies OffscreenRemoteSaveProgressMessage).catch(() => undefined)
 }
 
 function remoteLocation(
@@ -52,9 +71,15 @@ export async function writeRemoteSessionArtifacts(
   session: RootlineSession,
   config: TencentCosConfig,
 ): Promise<{ report: RootlineReportV1; location: RemoteArtifactLocation }> {
-  const captureDataUrl = await renderAnnotatedCapture(session)
+  notifyRemoteProgress(session.id, { stage: "rendering-capture" })
+  const captureDataUrl = await remoteStage("生成远程标注截图", () => renderAnnotatedCapture(session, {
+    mimeType: "image/webp",
+    quality: 0.82,
+  }))
   if (!captureDataUrl) throw new Error("没有可上传的页面截图。")
-  const recordingResult = session.recording ? await readRecordingResult(session.recording.resultId) : null
+  const recordingResult = session.recording
+    ? await remoteStage("读取录屏临时文件", () => readRecordingResult(session.recording!.resultId))
+    : null
   if (session.recording && !recordingResult) throw new Error("录屏临时结果已经丢失，无法上传 capture.webm。")
 
   const location = remoteLocation(session, config)
@@ -65,7 +90,7 @@ export async function writeRemoteSessionArtifacts(
     screenshot: {
       ...session.screenshot,
       markedDataUrl: captureDataUrl,
-      fileName: "capture.png",
+      fileName: captureDataUrl.startsWith("data:image/webp") ? "capture.webp" : "capture.png",
       width: session.page.viewport.width,
       height: session.page.viewport.height,
     },
@@ -73,18 +98,52 @@ export async function writeRemoteSessionArtifacts(
   const uploadedKeys: string[] = []
   try {
     if (recordingResult && location.recordingKey) {
-      await putCosObject(config, location.recordingKey, recordingResult.blob, recordingResult.mimeType || "video/webm")
+      notifyRemoteProgress(session.id, {
+        stage: "uploading-recording",
+        loadedBytes: 0,
+        totalBytes: recordingResult.blob.size,
+        percent: 0,
+      })
+      await remoteStage("上传录屏", () => putCosObject(
+        config,
+        location.recordingKey!,
+        recordingResult.blob,
+        recordingResult.mimeType || "video/webm",
+        { contentDisposition: 'inline; filename="capture.webm"', onProgress: (progress) => notifyRemoteProgress(session.id, { stage: "uploading-recording", loadedBytes: progress.loaded, totalBytes: progress.total, percent: progress.percent }) },
+      ))
       uploadedKeys.push(location.recordingKey)
     }
-    await putCosObject(
+    const reportBlob = new Blob([buildRemoteReportHtml(report, captureDataUrl)], { type: "text/html;charset=utf-8" })
+    notifyRemoteProgress(session.id, {
+      stage: "uploading-report",
+      loadedBytes: 0,
+      totalBytes: reportBlob.size,
+      percent: 0,
+    })
+    await remoteStage("上传远程报告", () => putCosObject(
       config,
       location.reportKey,
-      new Blob([buildRemoteReportHtml(report, captureDataUrl)], { type: "text/html;charset=utf-8" }),
+      reportBlob,
       "text/html;charset=utf-8",
-    )
+      { contentDisposition: 'inline; filename="rootline-report.html"', onProgress: (progress) => notifyRemoteProgress(session.id, { stage: "uploading-report", loadedBytes: progress.loaded, totalBytes: progress.total, percent: progress.percent }) },
+    ))
     uploadedKeys.push(location.reportKey)
-    await saveRemoteHistory(report, captureDataUrl)
-    return { report, location }
+    let storedReport = withoutScreenshotPayload(report)
+    notifyRemoteProgress(session.id, { stage: "saving-history" })
+    try {
+      await saveRemoteHistory(storedReport, captureDataUrl)
+    } catch {
+      // The public COS report is the primary artifact. A browser-side history
+      // quota failure must not turn a successful remote upload into a retry.
+      storedReport = {
+        ...storedReport,
+        boundaries: [
+          ...storedReport.boundaries,
+          { code: "remote-history-unavailable", message: "远程报告已上传，但当前浏览器未能保存这条本地历史索引。" },
+        ],
+      }
+    }
+    return { report: storedReport, location }
   } catch (error) {
     await Promise.all(uploadedKeys.map((key) => deleteCosObject(config, key).catch(() => undefined)))
     throw error
@@ -116,6 +175,7 @@ async function rewriteRemoteRecord(directoryName: string, issue?: RootlineIssue)
     report.remoteArtifacts!.reportKey,
     new Blob([buildRemoteReportHtml(report, stored.captureDataUrl)], { type: "text/html;charset=utf-8" }),
     "text/html;charset=utf-8",
+    { contentDisposition: 'inline; filename="rootline-report.html"' },
   )
   await saveStoredCaptureRecord({ ...stored, report, updatedAt: new Date().toISOString() })
   return report

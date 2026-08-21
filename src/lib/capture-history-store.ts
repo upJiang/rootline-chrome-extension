@@ -1,4 +1,5 @@
 import type { RootlineReportV1 } from "./types"
+import { withoutScreenshotPayload } from "./screenshot-payload"
 
 const DATABASE_NAME = "rootline-capture-history"
 const DATABASE_VERSION = 1
@@ -46,7 +47,10 @@ async function requestStore<TResult>(
 }
 
 export async function saveStoredCaptureRecord(record: StoredCaptureRecord): Promise<void> {
-  await requestStore("readwrite", (store) => store.put(record))
+  await requestStore("readwrite", (store) => store.put({
+    ...record,
+    report: withoutScreenshotPayload(record.report),
+  }))
 }
 
 export async function readStoredCaptureRecord(directoryName: string): Promise<StoredCaptureRecord | null> {

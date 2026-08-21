@@ -4,6 +4,7 @@ import type {
   ExtensionRequest,
   ExtensionResponse,
   OffscreenDownloadRequest,
+  OffscreenRemoteSaveProgressMessage,
   OffscreenReexportRemoteRequest,
   OffscreenReexportRequest,
   OffscreenTestCosRequest,
@@ -56,6 +57,7 @@ import {
   type RemoteArtifactLocation,
   type RootlineReportV1,
   type RootlineSession,
+  type TencentCosConfig,
 } from "../src/lib/types"
 
 const UNSUPPORTED_PAGE_MESSAGE = "Rootline 只能采集普通 HTTP/HTTPS 网页；Chrome 内部页、扩展商店和 PDF 不支持注入采集器。"
@@ -223,6 +225,10 @@ async function reannotateSession(sessionId: string, senderTabId?: number): Promi
   } catch (error) {
     await removeSession(session.id)
     await saveSession(previous)
+    // ROOTLINE_CLEANUP runs before the new session is started. If reconnecting
+    // fails, restore the completed action panel so the user can retry without
+    // being left with a blank page.
+    await sendToTab(tabId, { type: "ROOTLINE_SHOW_COMPLETE", session: previous }).catch(() => undefined)
     throw new Error(error instanceof Error ? error.message : "无法重新连接当前页面。")
   }
   return session
@@ -336,8 +342,11 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
       if (written.localLocation) current.localArtifacts = written.localLocation
       if (written.remoteLocation) current.remoteArtifacts = written.remoteLocation
       current.boundaries = written.report.boundaries
+      // The full screenshot has already been written to Downloads/COS and the
+      // history database. Keeping its base64 payload in chrome.storage.session
+      // can exceed Chrome's session quota after an otherwise successful upload.
       current.screenshot = {
-        ...current.screenshot,
+        ...(current.screenshot.capturedAt ? { capturedAt: current.screenshot.capturedAt } : {}),
         fileName: "capture.png",
         width: current.page.viewport.width,
         height: current.page.viewport.height,
@@ -346,6 +355,9 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
       recordingResultToClear = current.recording?.resultId ?? null
     } catch (error) {
       await sendToTab(current.tabId, { type: "ROOTLINE_ABORT_FINISH" })
+      // A retry captures a fresh screenshot. Do not let a large failed-attempt
+      // payload hide the real upload error behind a storage quota error.
+      current.screenshot = {}
       current.boundaries.push({
         code: "capture-save-failed",
         message: `本次证据未能保存：${error instanceof Error ? error.message : "浏览器未授权截图"}`,
@@ -431,7 +443,11 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
       config,
     } satisfies OffscreenTestCosRequest)) as ExtensionResponse
     if (!response?.ok) throw new Error(response?.error ?? "腾讯云 COS 连接测试失败。")
-    return { ok: true, data: response.data }
+    // The test uses the values currently entered in the settings form. Save
+    // those verified values so the next capture cannot use stale credentials.
+    const verified = normalizeTencentCosConfig((response.data as TencentCosConfig | undefined) ?? config)
+    const saved = await saveTencentCosConfig(verified)
+    return { ok: true, data: saved.remote ?? verified }
   }
   if (message.type === "GET_SESSION") {
     const session = await readSession(message.sessionId)
@@ -462,6 +478,7 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
     message.type === "GET_AI_CONTEXT_FROM_PAGE"
     || message.type === "EXPORT_FROM_PAGE"
     || message.type === "OPEN_REVIEW_FROM_PAGE"
+    || message.type === "OPEN_REMOTE_REPORT_FROM_PAGE"
   ) {
     const session = await readSession(message.sessionId)
     if (!session || sender.tab?.id !== session.tabId || !["reviewing", "exported"].includes(session.status)) {
@@ -470,8 +487,17 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
     if (message.type === "GET_AI_CONTEXT_FROM_PAGE") {
       return { ok: true, data: session.remoteArtifacts ? buildRemoteAiContext(session.remoteArtifacts) : buildReportMarkdown(createReport(session)) }
     }
+    if (message.type === "OPEN_REMOTE_REPORT_FROM_PAGE") {
+      if (!session.remoteArtifacts?.reportUrl) return { ok: false, error: "本次采集没有远程报告链接。" }
+      await chrome.tabs.create({ url: session.remoteArtifacts.reportUrl })
+      return { ok: true }
+    }
     if (message.type === "EXPORT_FROM_PAGE") {
       return { ok: true, data: { directory: await exportSession(session.id) } }
+    }
+    if (message.type === "OPEN_REVIEW_FROM_PAGE" && session.remoteArtifacts?.reportUrl) {
+      await chrome.tabs.create({ url: session.remoteArtifacts.reportUrl })
+      return { ok: true }
     }
     const recordName = recordNameForSession(session)
     const reviewUrl = recordName
@@ -556,6 +582,21 @@ export default defineBackground(() => {
     }
     const type = (message as { type?: string }).type
     if (type === "OFFSCREEN_WRITE_SESSION" || type === "OFFSCREEN_WRITE_REMOTE_SESSION" || type === "OFFSCREEN_REEXPORT_RECORD" || type === "OFFSCREEN_REEXPORT_REMOTE_RECORD" || type === "OFFSCREEN_TEST_COS") return false
+    if (type === "OFFSCREEN_REMOTE_SAVE_PROGRESS") {
+      const request = message as OffscreenRemoteSaveProgressMessage
+      if (sender.id !== chrome.runtime.id || typeof request.sessionId !== "string") {
+        sendResponse({ ok: false, error: "远程保存进度消息来源校验失败。" })
+        return false
+      }
+      readSession(request.sessionId)
+        .then(async (session) => {
+          if (!session || session.status !== "capturing") return sendResponse({ ok: false, error: "采集会话已经结束。" })
+          await sendToTab(session.tabId, { type: "ROOTLINE_UPDATE_FINISH_PROGRESS", progress: request.progress })
+          sendResponse({ ok: true })
+        })
+        .catch(() => sendResponse({ ok: false, error: "远程保存进度同步失败。" }))
+      return true
+    }
     if (type === "OFFSCREEN_DOWNLOAD_ARTIFACT") {
       const request = message as OffscreenDownloadRequest
       if (sender.id !== chrome.runtime.id || (!request.url.startsWith("blob:") && !request.url.startsWith("data:"))) {

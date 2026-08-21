@@ -6,6 +6,7 @@ import {
   Clipboard,
   Code2,
   Download,
+  ExternalLink,
   FileJson,
   Gauge,
   Globe2,
@@ -90,7 +91,18 @@ function formatFileSize(sizeBytes: number): string {
 }
 
 async function copyText(value: string): Promise<void> {
-  await navigator.clipboard.writeText(value)
+  try {
+    await navigator.clipboard.writeText(value)
+  } catch {
+    const textarea = document.createElement("textarea")
+    textarea.value = value
+    textarea.style.position = "fixed"
+    textarea.style.opacity = "0"
+    document.body.append(textarea)
+    textarea.select()
+    document.execCommand("copy")
+    textarea.remove()
+  }
 }
 
 async function persistIssue(session: RootlineSession, recordDirectory: string | null, issue: RootlineIssue): Promise<RootlineSession> {
@@ -111,7 +123,7 @@ export function DiagnosisApp() {
   const [activeTab, setActiveTab] = useState<TabId>("issue")
   const [annotatedCapture, setAnnotatedCapture] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState<"copy" | "export" | null>(null)
+  const [busy, setBusy] = useState<"copy" | "copy-link" | "export" | "open-remote" | null>(null)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [dirty, setDirty] = useState(false)
   const [recordDirectory, setRecordDirectory] = useState<string | null>(null)
@@ -245,6 +257,35 @@ export function DiagnosisApp() {
     }
   }
 
+  const copyRemoteReportLink = async () => {
+    const reportUrl = session?.remoteArtifacts?.reportUrl
+    if (!reportUrl) return
+    setBusy("copy-link")
+    setFeedback(null)
+    try {
+      await copyText(reportUrl)
+      showFeedback({ tone: "success", message: "报告链接已复制，可直接打开或粘贴给 AI。" })
+    } catch (error) {
+      showFeedback({ tone: "error", message: error instanceof Error ? error.message : "报告链接复制失败。" })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const openRemoteReport = async () => {
+    const reportUrl = session?.remoteArtifacts?.reportUrl
+    if (!reportUrl) return
+    setBusy("open-remote")
+    setFeedback(null)
+    try {
+      await chrome.tabs.create({ url: reportUrl })
+    } catch (error) {
+      showFeedback({ tone: "error", message: error instanceof Error ? error.message : "远程报告打开失败。" })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const exportReport = async () => {
     setBusy("export")
     setFeedback(null)
@@ -324,6 +365,16 @@ export function DiagnosisApp() {
         </div>
         <div className="diagnosis-header__actions">
           <CompletenessBadge level={completeness.level} score={completeness.score} />
+          {session.remoteArtifacts ? <>
+            <button className="rl-button" disabled={busy !== null} onClick={() => void openRemoteReport()} type="button">
+              {busy === "open-remote" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <ExternalLink aria-hidden="true" size={17} />}
+              打开远程报告
+            </button>
+            <button className="rl-button" disabled={busy !== null} onClick={() => void copyRemoteReportLink()} type="button">
+              {busy === "copy-link" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Clipboard aria-hidden="true" size={17} />}
+              复制报告链接
+            </button>
+          </> : null}
           <button className="rl-button" disabled={busy !== null} onClick={copyContext} type="button">
             {busy === "copy" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Clipboard aria-hidden="true" size={17} />}
             复制 AI 上下文

@@ -158,6 +158,16 @@ body {
   line-height: 1.6;
 }
 
+.cos-settings-help code {
+  overflow-wrap: anywhere;
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  background: var(--color-code);
+  color: var(--color-code-ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .cos-settings-guide {
   border: var(--rule-thin) solid var(--color-border);
   border-radius: var(--radius-md);

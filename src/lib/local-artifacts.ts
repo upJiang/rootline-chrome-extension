@@ -15,6 +15,7 @@ import { joinNativePath, parentDirectoryPath } from "./local-paths"
 import { buildReportMarkdown, createReport, serializeReportJson } from "./report"
 import { readRecordingResult } from "./recording-result-store"
 import { buildCaptureDirectoryName } from "./time"
+import { withoutScreenshotPayload } from "./screenshot-payload"
 import type {
   ArtifactAvailability,
   ArtifactKind,
@@ -304,8 +305,9 @@ async function writeDownloadedArtifacts(
       downloadIds: { ...location.downloadIds, json: json.id },
     }
     report = { ...report, localArtifacts: location }
-    await saveHistory(report, captureDataUrl)
-    return { report, location }
+    const storedReport = withoutScreenshotPayload(report)
+    await saveHistory(storedReport, captureDataUrl)
+    return { report: storedReport, location }
   } catch (error) {
     await requestDownloadCleanup(createdIds).catch(() => undefined)
     await removeStoredCaptureRecord(directoryName).catch(() => undefined)

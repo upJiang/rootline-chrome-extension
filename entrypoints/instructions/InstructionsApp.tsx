@@ -80,7 +80,7 @@ export function InstructionsApp() {
             </article>
             <article>
               <HardDrive aria-hidden="true" size={20} />
-              <div><h3>本地或远程保存</h3><p>本地模式写入 Downloads/Rootline；远程模式直接写入你的腾讯云 COS。推荐“公有读、私有写”，不要使用公有读写。可以使用已有腾讯云密钥，不强制创建子用户，但最小权限 CAM 子用户更安全。</p></div>
+              <div><h3>本地或远程保存</h3><p>本地模式写入 Downloads/Rootline；远程模式直接写入你的腾讯云 COS。推荐“公有读、私有写”，不要使用公有读写。请同时关闭 COS 的“强制下载/下载文件”设置，否则 report.html 会被浏览器直接下载而不是打开；CORS 建议暴露 Content-Disposition、Content-Type、Content-Length、ETag。可以使用已有腾讯云密钥，不强制创建子用户，但最小权限 CAM 子用户更安全。</p></div>
             </article>
             <article>
               <Cookie aria-hidden="true" size={20} />

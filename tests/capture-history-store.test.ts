@@ -19,6 +19,11 @@ describe("capture history index", () => {
   it("persists the structured report and annotated screenshot independently of a directory handle", async () => {
     const report = createReport({
       ...makeSession(),
+      screenshot: {
+        dataUrl: "data:image/png;base64,raw",
+        markedDataUrl: "data:image/png;base64,marked",
+        fileName: "capture.png",
+      },
       localArtifacts: {
         rootName: "Chrome 下载目录",
         directoryName: DIRECTORY_NAME,
@@ -39,7 +44,11 @@ describe("capture history index", () => {
       updatedAt: report.generatedAt,
     })
 
-    expect((await readStoredCaptureRecord(DIRECTORY_NAME))?.report.localArtifacts?.downloadIds?.capture).toBe(3)
+    const stored = await readStoredCaptureRecord(DIRECTORY_NAME)
+    expect(stored?.report.localArtifacts?.downloadIds?.capture).toBe(3)
+    expect(stored?.report.screenshot.dataUrl).toBeUndefined()
+    expect(stored?.report.screenshot.markedDataUrl).toBeUndefined()
+    expect(stored?.captureDataUrl).toBe("data:image/png;base64,AA==")
     expect((await listStoredCaptureRecords()).some((record) => record.directoryName === DIRECTORY_NAME)).toBe(true)
   })
 })

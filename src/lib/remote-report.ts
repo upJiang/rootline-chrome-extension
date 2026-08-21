@@ -11,7 +11,7 @@ function escapeHtml(value: string): string {
 }
 
 function safeCaptureDataUrl(value: string): string {
-  return /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(value) ? value : ""
+  return /^data:image\/(?:png|webp);base64,[A-Za-z0-9+/=]+$/.test(value) ? value : ""
 }
 
 export function buildRemoteReportHtml(report: RootlineReportV1, captureDataUrl: string): string {
@@ -51,4 +51,3 @@ export function buildRemoteReportHtml(report: RootlineReportV1, captureDataUrl: 
 </body>
 </html>`
 }
-

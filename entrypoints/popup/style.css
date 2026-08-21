@@ -210,9 +210,20 @@ body,
 }
 
 .capture-entry-actions,
-.recording-away {
+.recording-away,
+.remote-review-actions {
   display: grid;
   gap: var(--space-2);
+}
+
+.remote-review-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 390px) {
+  .remote-review-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .recording-start { border-color: color-mix(in oklch, var(--color-error), var(--color-surface) 70%); background: var(--color-error-soft); color: var(--color-error); }

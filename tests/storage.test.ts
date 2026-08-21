@@ -79,4 +79,24 @@ describe("session storage", () => {
     expect((await readSessionForTab(1))?.id).toBe("current")
     expect((await readSession("previous"))?.issue.description).toBe("补充旧报告说明")
   })
+
+  it("never stores base64 screenshot payloads in chrome session storage", async () => {
+    await saveSession(makeSession({
+      screenshot: {
+        dataUrl: `data:image/png;base64,${"A".repeat(12_000_000)}`,
+        markedDataUrl: "data:image/png;base64,marked",
+        capturedAt: "2026-08-13T04:00:03.000Z",
+        fileName: "capture.png",
+      },
+    }))
+
+    expect(await readSession("session-test")).toMatchObject({
+      screenshot: {
+        capturedAt: "2026-08-13T04:00:03.000Z",
+        fileName: "capture.png",
+      },
+    })
+    expect((await readSession("session-test"))?.screenshot.dataUrl).toBeUndefined()
+    expect((await readSession("session-test"))?.screenshot.markedDataUrl).toBeUndefined()
+  })
 })

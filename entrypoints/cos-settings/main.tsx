@@ -111,8 +111,9 @@ export function CosSettingsApp() {
 
   const test = () => run("test", async () => {
     const verified = await request<TencentCosConfig>({ type: "TEST_COS_CONFIG", config: configFromForm() })
-    setForm((current) => ({ ...current, verifiedAt: verified.verifiedAt ?? new Date().toISOString() }))
-    showFeedback({ tone: "success", message: "连接成功：测试文件已上传、公开读取并删除。" })
+    setSaveConfig({ mode: "remote", remote: verified })
+    setForm(initialForm(verified))
+    showFeedback({ tone: "success", message: "连接成功：配置已自动保存，测试文件已上传、公开读取并删除。" })
   })
 
   const clear = () => run("clear", async () => {
@@ -161,7 +162,7 @@ export function CosSettingsApp() {
       <section className="cos-settings-card cos-settings-form-card" aria-labelledby="cos-form-title">
         <div className="cos-settings-section-heading"><div><p className="cos-settings-eyebrow">Credentials</p><h2 id="cos-form-title">存储桶信息</h2></div><span>{saveConfig?.mode === "remote" ? "远程保存已启用" : "当前使用本地保存"}</span></div>
         <div className="cos-settings-form">
-          <label><span>Bucket</span><input aria-label="Bucket" className="rl-field" onChange={(event) => updateField("bucket", event.target.value)} placeholder="rootline-1250000000" value={form.bucket} /></label>
+          <label><span>Bucket（含主账号 APPID 后缀）</span><input aria-label="Bucket" className="rl-field" onChange={(event) => updateField("bucket", event.target.value)} placeholder="rootline-1250000000" title="请填写完整 Bucket 名称，末尾通常包含主账号 APPID" value={form.bucket} /></label>
           <label><span>Region</span><input aria-label="Region" className="rl-field" onChange={(event) => updateField("region", event.target.value)} placeholder="ap-guangzhou" value={form.region} /></label>
           <label><span>SecretId</span><input aria-label="SecretId" autoComplete="off" className="rl-field" onChange={(event) => updateField("secretId", event.target.value)} placeholder="腾讯云 SecretId" value={form.secretId} /></label>
           <label><span>SecretKey</span><input aria-label="SecretKey" autoComplete="new-password" className="rl-field" onChange={(event) => updateField("secretKey", event.target.value)} placeholder="腾讯云 SecretKey" type="password" value={form.secretKey} /></label>
@@ -176,13 +177,14 @@ export function CosSettingsApp() {
         <p className="cos-settings-guide__note">推荐使用只授权 Rootline 对象前缀的 CAM 子用户。你也可以使用已有密钥，但不需要在 Rootline 里额外填写子账号 ID。</p>
         <ol>
           <li>创建存储桶：打开 <a href="https://console.cloud.tencent.com/cos" rel="noreferrer" target="_blank">腾讯云 COS 控制台</a>，记录完整 Bucket 名称和 Region。访问权限选择“公有读、私有写”，不要开启公有写。</li>
+          <li>关闭强制下载：在存储桶的基础配置或域名访问设置中，关闭“强制下载”“下载文件”或把响应处置设为 <code>inline</code>。否则浏览器会把 <code>report.html</code> 当附件下载，无法直接打开报告页面；关闭后请重新测试连接。</li>
           <li>创建子用户：打开 <a href="https://console.cloud.tencent.com/cam/user" rel="noreferrer" target="_blank">CAM 用户管理</a>，选择“新建用户”，创建一个仅用于 Rootline 的子用户。官方说明见 <a href="https://cloud.tencent.com/document/product/598/13674" rel="noreferrer" target="_blank">创建子用户文档</a>。</li>
           <li>分配 COS 权限：在子用户的“权限”中添加 COS 对象权限，至少允许 <code>PutObject</code>、<code>GetObject</code>、<code>HeadObject</code>、<code>DeleteObject</code>，资源限制到当前 Bucket 的 <code>rootline/*</code> 前缀，不授予列出整个存储桶的权限。参考 <a href="https://cloud.tencent.com/document/product/436/11714" rel="noreferrer" target="_blank">COS 访问策略文档</a>。不要只添加 <code>QcloudCollApiKeyManageAccess</code>，它不是 COS 数据权限。</li>
           <li>创建密钥：进入子用户的“API 密钥”页，点击“新建密钥”，复制一次性显示的 SecretId 和 SecretKey。也可以直接打开 <a href="https://console.cloud.tencent.com/cam/capi" rel="noreferrer" target="_blank">API 密钥管理</a>，官方说明见 <a href="https://cloud.tencent.com/document/product/598/32675" rel="noreferrer" target="_blank">访问密钥文档</a>。</li>
-          <li>配置 CORS：在 COS 存储桶的“安全管理 → 跨域访问 CORS”中允许 <code>PUT</code>、<code>GET</code>、<code>HEAD</code>、<code>DELETE</code>、<code>OPTIONS</code>，参考 <a href="https://cloud.tencent.com/document/product/436/13318" rel="noreferrer" target="_blank">CORS 配置文档</a>。</li>
+          <li>配置 CORS：在 COS 存储桶的“安全管理 → 跨域访问 CORS”中允许 <code>PUT</code>、<code>GET</code>、<code>HEAD</code>、<code>DELETE</code>、<code>OPTIONS</code>，并暴露 <code>Content-Disposition</code>、<code>Content-Type</code>、<code>Content-Length</code>、<code>ETag</code> 响应头，参考 <a href="https://cloud.tencent.com/document/product/436/13318" rel="noreferrer" target="_blank">CORS 配置文档</a>。</li>
           <li>建议设置 7 天或 30 天生命周期自动清理旧采集记录，不要把 SecretId 或 SecretKey 粘贴到报告、工单或聊天记录中。</li>
         </ol>
-        <p className="cos-settings-guide__note cos-settings-guide__warning">如果测试连接返回 403，优先检查子用户是否拥有 COS 对象权限、Bucket 是否填写了主账号 APPID 后缀，以及 CORS 是否允许上述方法。通常不需要添加任何子账号 ID。</p>
+        <p className="cos-settings-guide__note cos-settings-guide__warning">如果测试连接返回 403，优先检查子用户是否拥有 COS 对象权限、Bucket 是否填写了主账号 APPID 后缀，以及 CORS 是否允许上述方法。若提示“强制下载”，请关闭 COS 的“强制下载/下载文件”选项。通常不需要添加任何子账号 ID。</p>
       </details>
 
       <p className="cos-settings-privacy">Rootline 不提供云端服务，不会保存或接收你的报告、截图、录屏和网页内容。文件只会直接上传到你配置的腾讯云 COS；凭证只保存在当前浏览器扩展本地存储，不会发送给 Rootline，也不会写入报告。公有读链接泄露后，获得链接的人可以读取报告。</p>

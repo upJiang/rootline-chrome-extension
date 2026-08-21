@@ -101,6 +101,13 @@ export function HistoryApp() {
     showFeedback({ tone: "success", message: record.remoteLocation ? "AI 上下文已复制，复用现有 COS 链接。" : "AI 上下文已复制，包含本地证据的绝对路径。" })
   })
 
+  const copyRemoteLink = (directoryName: string) => run(`copy-link:${directoryName}`, async () => {
+    const record = await readCaptureRecord(directoryName)
+    if (!record.remoteLocation?.reportUrl) throw new Error("这条采集记录没有可用的远程报告链接。")
+    await copyText(record.remoteLocation.reportUrl)
+    showFeedback({ tone: "success", message: "报告链接已复制，可直接打开或粘贴给 AI。" })
+  })
+
   const reexportRecord = (directoryName: string) => run(`export:${directoryName}`, async () => {
     const record = await readCaptureRecord(directoryName)
     if (record.remoteLocation) await reexportRemoteCaptureRecord(directoryName)
@@ -158,6 +165,7 @@ export function HistoryApp() {
               <div className="history-record__actions">
                 <button className="rl-button rl-button--primary" onClick={() => void openRecord(item.directoryName)} type="button"><ExternalLink aria-hidden="true" size={16} />查看报告</button>
                 {item.report.recording && (item.remoteLocation?.recordingUrl || typeof item.location?.downloadIds?.recording === "number") ? <button className="rl-button" disabled={busy !== null || item.recordingState !== "available"} onClick={() => void openRecording(item.directoryName)} type="button"><Video aria-hidden="true" size={16} />打开录屏</button> : null}
+                {item.remoteLocation ? <button className="rl-button" disabled={busy !== null} onClick={() => void copyRemoteLink(item.directoryName)} type="button"><ClipboardCopy aria-hidden="true" size={16} />复制报告链接</button> : null}
                 <button className="rl-button" disabled={busy !== null} onClick={() => void copyRecord(item.directoryName)} type="button"><ClipboardCopy aria-hidden="true" size={16} />复制 AI 上下文</button>
                 <button className="rl-button" disabled={busy !== null} onClick={() => void reexportRecord(item.directoryName)} type="button"><FileOutput aria-hidden="true" size={16} />重新导出报告</button>
               </div>

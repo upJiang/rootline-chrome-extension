@@ -18,7 +18,15 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   })
 }
 
-export async function renderAnnotatedCapture(session: RootlineSession): Promise<string | undefined> {
+export interface AnnotatedCaptureOptions {
+  mimeType?: "image/png" | "image/webp"
+  quality?: number
+}
+
+export async function renderAnnotatedCapture(
+  session: RootlineSession,
+  options: AnnotatedCaptureOptions = {},
+): Promise<string | undefined> {
   if (!session.screenshot.dataUrl) return undefined
   const image = await loadImage(session.screenshot.dataUrl)
   const canvas = document.createElement("canvas")
@@ -54,7 +62,12 @@ export async function renderAnnotatedCapture(session: RootlineSession): Promise<
     context.fillStyle = "#86efac"
     context.fillText(String(index + 1), centerX, centerY + 1)
   })
-  return canvas.toDataURL("image/png")
+  const mimeType = options.mimeType ?? "image/png"
+  const encoded = canvas.toDataURL(mimeType, options.quality)
+  // Older Chromium builds can silently return PNG for unsupported formats.
+  return mimeType === "image/webp" && !encoded.startsWith("data:image/webp;base64,")
+    ? canvas.toDataURL("image/png")
+    : encoded
 }
 
 export async function createExportArtifacts(session: RootlineSession, now = new Date()): Promise<ExportArtifacts> {
