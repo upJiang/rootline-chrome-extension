@@ -43,7 +43,7 @@ export default defineConfig({
     name: "Rootline",
     short_name: "Rootline",
     description: "Capture browser runtime evidence and export a local, Tencent COS, or Alibaba OSS debugging report.",
-    version: "0.1.1",
+    version: "0.1.2",
     minimum_chrome_version: "120",
     permissions: ["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads", "downloads.open"],
     host_permissions: ["https://*.myqcloud.com/*", "https://*.aliyuncs.com/*"],
