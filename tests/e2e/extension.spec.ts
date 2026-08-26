@@ -886,6 +886,39 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
   await expect(historyRecord).toBeVisible()
   await expect(historyRecord.getByRole("img", { name: /页面截图：Rootline React Fixture/ })).toBeVisible()
   await expect(historyRecord.getByText(directoryPath)).toBeVisible()
+  const filterGeometry = await historyPage.evaluate(() => {
+    const getBox = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector)
+      if (!element) throw new Error(`Missing history filter element: ${selector}`)
+      const box = element.getBoundingClientRect()
+      return { top: box.top, height: box.height, center: box.top + box.height / 2 }
+    }
+    const centerOf = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector)
+      if (!element) throw new Error(`Missing history filter content: ${selector}`)
+      const box = element.getBoundingClientRect()
+      return box.top + box.height / 2
+    }
+    return {
+      search: getBox(".history-search"),
+      date: getBox(".history-date-trigger"),
+      status: getBox(".history-filter-status"),
+      searchIcon: centerOf(".history-search .history-control-icon"),
+      searchLabel: centerOf(".history-search__label"),
+      dateIcon: centerOf(".history-date-trigger .history-control-icon"),
+      dateLabel: centerOf(".history-date-trigger__label"),
+      dateValue: centerOf(".history-date-trigger__value"),
+      statusIcon: centerOf(".history-filter-status svg"),
+      statusLabel: centerOf(".history-filter-status"),
+    }
+  })
+  for (const control of [filterGeometry.date, filterGeometry.status]) {
+    expect(Math.abs(control.top - filterGeometry.search.top)).toBeLessThanOrEqual(1)
+    expect(Math.abs(control.height - filterGeometry.search.height)).toBeLessThanOrEqual(1)
+  }
+  for (const center of [filterGeometry.searchIcon, filterGeometry.searchLabel, filterGeometry.dateIcon, filterGeometry.dateLabel, filterGeometry.dateValue, filterGeometry.statusIcon, filterGeometry.statusLabel]) {
+    expect(Math.abs(center - filterGeometry.search.center)).toBeLessThanOrEqual(1)
+  }
   await historyPage.getByPlaceholder("页面、域名或目录").fill("Rootline React Fixture")
   await expect(historyRecord).toBeVisible()
   await historyPage.getByPlaceholder("页面、域名或目录").fill("不存在的采集页面")

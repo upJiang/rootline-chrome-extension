@@ -98,7 +98,19 @@ body,
   align-items: center;
 }
 
+.history-filter-toolbar > .history-search,
+.history-filter-toolbar > .history-filter-controls,
+.history-filter-toolbar > .history-clear,
+.history-filter-toolbar > .history-filter-status {
+  height: 46px;
+  min-height: 46px;
+  align-self: center;
+}
+
 .history-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
   width: min(560px, 46%);
   min-width: 280px;
   gap: 9px;
@@ -107,15 +119,20 @@ body,
   padding: 0 12px;
   background: var(--color-surface);
   color: var(--color-ink-muted);
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .history-search input {
+  display: block;
   width: 100%;
   min-width: 0;
-  min-height: 44px;
+  height: 44px;
+  min-height: 0;
   border: 0;
   padding: 0;
   background: transparent;
+  line-height: 44px;
 }
 
 .history-search__clear {
@@ -144,11 +161,44 @@ body,
 
 .history-search__label {
   flex: none;
-  padding-right: 9px;
-  border-right: var(--rule-thin) solid var(--color-border);
+  height: 17px;
   color: var(--color-ink);
   font-size: 11px;
   font-weight: 700;
+  line-height: 17px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.history-search__lead,
+.history-date-trigger__lead {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 9px;
+  min-width: max-content;
+}
+
+.history-search__lead {
+  height: 44px;
+  padding-right: 9px;
+  border-right: var(--rule-thin) solid var(--color-border);
+}
+
+.history-control-icon {
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transform: translateY(-1px);
+}
+
+.history-control-icon svg {
+  display: block;
 }
 
 .history-search:focus-within {
@@ -210,9 +260,10 @@ body,
 
 .history-date-trigger {
   display: inline-flex;
-  min-height: 46px;
+  height: 46px;
+  min-height: 0;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
   border: var(--rule-thin) dashed var(--color-border-strong);
   border-radius: var(--radius-md);
   padding: 0 14px;
@@ -220,7 +271,9 @@ body,
   color: var(--color-ink);
   font-size: 13px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .history-date-trigger:hover,
@@ -230,22 +283,37 @@ body,
 }
 
 .history-date-trigger__label {
+  display: inline-flex;
+  height: 17px;
+  align-items: center;
   color: var(--color-ink-muted);
+  line-height: 17px;
+  white-space: nowrap;
+}
+
+.history-date-trigger__lead {
+  gap: 7px;
 }
 
 .history-date-trigger__value {
+  display: inline-flex;
+  height: 17px;
+  align-items: center;
   color: var(--color-ink);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
+  line-height: 17px;
 }
 
 .history-date-clear,
 .history-date-popover__close {
   display: inline-grid;
   place-items: center;
+  width: 32px;
   min-width: 32px;
-  min-height: 46px;
+  height: 46px;
+  min-height: 0;
   border: var(--rule-thin) solid var(--color-border-strong);
   background: var(--color-surface);
   color: var(--color-ink-muted);
@@ -292,12 +360,16 @@ body,
 }
 
 .history-date-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .history-date-fields label {
-  flex: 1 1 140px;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
   gap: 5px;
   min-height: 40px;
   border: var(--rule-thin) solid var(--color-border-strong);
@@ -313,8 +385,13 @@ body,
 }
 
 .history-date-fields label > span {
+  display: inline-flex;
+  min-width: 44px;
+  align-items: center;
   font-size: 10px;
   font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .history-date-fields input {
@@ -326,11 +403,13 @@ body,
   background: transparent;
   font-family: var(--font-mono);
   font-size: 12px;
+  line-height: 1.4;
 }
 
 .history-date-separator {
   color: var(--color-ink-faint);
   font-size: 11px;
+  line-height: 1;
 }
 
 .history-calendar-toolbar {
@@ -446,6 +525,10 @@ body,
 .history-search__clear svg {
   flex: 0 0 auto;
   display: block;
+}
+
+.history-filter-status svg {
+  transform: translateY(-1px);
 }
 
 .history-date-error {

@@ -184,8 +184,10 @@ function DateRangeFilter({ range, onChange, onClear }: { range: HistoryDateRange
     <div className="history-date-filter" ref={rootRef}>
       <div className="history-date-trigger-wrap">
         <button aria-expanded={open} aria-haspopup="dialog" className="history-date-trigger" onClick={() => setOpen((current) => !current)} type="button">
-          <CalendarDays aria-hidden="true" size={16} />
-          <span className="history-date-trigger__label">时间范围</span>
+          <span className="history-date-trigger__lead">
+            <span aria-hidden="true" className="history-control-icon"><CalendarDays size={16} /></span>
+            <span className="history-date-trigger__label">时间范围</span>
+          </span>
           <span className="history-date-trigger__value">{label}</span>
         </button>
         {hasDate ? <button aria-label="清除日期筛选" className="history-date-clear" onClick={() => { onClear(); setOpen(false) }} title="清除日期筛选" type="button"><X aria-hidden="true" size={15} /></button> : null}
@@ -384,8 +386,10 @@ export function HistoryApp() {
         <div className="history-filters" aria-label="历史筛选" role="search">
           <div className="history-filter-toolbar">
             <div className="history-search">
-              <Search aria-hidden="true" size={17} />
-              <label className="history-search__label" htmlFor="history-search-input">搜索</label>
+              <span className="history-search__lead">
+                <span aria-hidden="true" className="history-control-icon"><Search size={17} /></span>
+                <label className="history-search__label" htmlFor="history-search-input">搜索</label>
+              </span>
               <input id="history-search-input" onChange={(event) => setQuery(event.target.value)} placeholder="页面、域名或目录" value={query} />
               {query ? <button aria-label="清除搜索" className="history-search__clear" onClick={() => setQuery("")} title="清除搜索" type="button"><X aria-hidden="true" size={15} /></button> : null}
             </div>
