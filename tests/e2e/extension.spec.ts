@@ -4,6 +4,7 @@ import { cp } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import sharp from "sharp"
+import type { RootlineSession } from "../../src/lib/types"
 
 let context: BrowserContext
 let extensionId = ""
@@ -426,7 +427,15 @@ async function finishFromPage(page: Page): Promise<void> {
 async function openReviewFromPage(page: Page): Promise<Page> {
   const previousPages = new Set(context.pages())
   await page.locator("#rootline-runtime-overlay").locator("button[data-open-review]").click()
-  return waitForCapturePage(previousPages)
+  const capturePage = await waitForCapturePage(previousPages)
+  await expect(page.locator("#rootline-runtime-overlay")).toHaveCount(0)
+  return capturePage
+}
+
+async function showCompletion(session: RootlineSession, tabId: number): Promise<void> {
+  await (await extensionWorker()).evaluate(async ({ session: completed, tabId: targetTabId }) => {
+    await chrome.tabs.sendMessage(targetTabId, { type: "ROOTLINE_SHOW_COMPLETE", session: completed })
+  }, { session, tabId })
 }
 
 async function exportedFiles(): Promise<{
@@ -539,7 +548,7 @@ test.afterAll(async () => {
 })
 
 test("production manifest keeps page capture on demand and limits remote access to supported object storage", () => {
-  expect(productionManifest.permissions).toEqual(["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads"])
+  expect(productionManifest.permissions).toEqual(["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads", "downloads.open"])
   expect(productionManifest.host_permissions).toEqual(["https://*.myqcloud.com/*", "https://*.aliyuncs.com/*"])
   expect(productionManifest.optional_host_permissions).toBeUndefined()
   expect(productionManifest).not.toHaveProperty("content_scripts")
@@ -581,6 +590,15 @@ test("defaults to Chrome Downloads and exposes optional Tencent COS settings", a
   await expect.poll(() => context.pages().find((page) => !pagesBeforeSettings.has(page) && page.url().includes("/cos-settings.html"))?.url() ?? "").toContain("cos-settings.html")
   const settingsPage = context.pages().find((page) => !pagesBeforeSettings.has(page) && page.url().includes("/cos-settings.html"))
   if (!settingsPage) throw new Error("COS settings popup was not opened")
+  await expect.poll(() => context.pages().filter((page) => !pagesBeforeSettings.has(page) && page.url().includes("popup.html")).length).toBe(0)
+  const readSettingsWindow = () => settingsPage.evaluate(async () => {
+    const current = await chrome.windows.getCurrent()
+    return { height: current.height, state: current.state, type: current.type, width: current.width }
+  })
+  await expect.poll(readSettingsWindow, { timeout: 5_000 }).toMatchObject({ state: "normal", type: "popup" })
+  await expect.poll(async () => (await readSettingsWindow()).width ?? 0, { timeout: 5_000 }).toBeGreaterThanOrEqual(680)
+  await expect.poll(async () => (await readSettingsWindow()).width ?? Number.POSITIVE_INFINITY, { timeout: 5_000 }).toBeLessThanOrEqual(720)
+  await expect.poll(async () => (await readSettingsWindow()).height ?? Number.POSITIVE_INFINITY, { timeout: 5_000 }).toBeLessThanOrEqual(800)
   await expect(settingsPage.getByRole("heading", { name: "选择云服务商" })).toBeVisible()
   await expect(settingsPage.getByRole("tab", { name: "腾讯云 COS" })).toHaveAttribute("aria-selected", "true")
   await expect(settingsPage.getByRole("tab", { name: "阿里云 OSS" })).toBeVisible()
@@ -601,12 +619,8 @@ test("defaults to Chrome Downloads and exposes optional Tencent COS settings", a
   await expect(settingsPage.getByLabel("Bucket")).toBeVisible()
   await expect(settingsPage.getByLabel("AccessKey Secret")).toHaveAttribute("type", "password")
   await settingsPage.getByRole("button", { name: "关闭配置窗口" }).click()
-  await settingsPage.close()
-  await expect(popup.getByRole("tab", { name: "本地" })).toHaveAttribute("aria-selected", "true")
-  if (process.env.ROOTLINE_SCREENSHOTS === "1") {
-    await popup.setViewportSize({ width: 380, height: 680 })
-    await popup.screenshot({ path: "/tmp/rootline-save-location.png", fullPage: true })
-  }
+  await expect.poll(() => settingsPage.isClosed()).toBe(true)
+  await settingsPage.close().catch(() => undefined)
   await popup.close()
 })
 
@@ -723,6 +737,7 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
   await expect(completion.getByText("2 个元素", { exact: false })).toBeVisible()
   await expect(completion.getByRole("button", { name: "查看本次完整证据" })).toBeVisible()
   await expect(completion.getByRole("button", { name: "重新标注" })).toBeVisible()
+  await expect(completion.getByRole("button", { name: "关闭采集完成提示" })).toBeVisible()
   const initialExportedFiles = await exportedFiles()
   await expect(completion.locator("[data-complete-location]")).toHaveText(initialExportedFiles.directoryPath)
   await completion.locator("button[data-copy-context]").click()
@@ -869,19 +884,79 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
   await expect(historyPage.getByRole("heading", { name: "采集历史" })).toBeVisible()
   const historyRecord = historyPage.locator(".history-record").filter({ hasText: "Rootline React Fixture" }).first()
   await expect(historyRecord).toBeVisible()
+  await expect(historyRecord.getByRole("img", { name: /页面截图：Rootline React Fixture/ })).toBeVisible()
   await expect(historyRecord.getByText(directoryPath)).toBeVisible()
+  await historyPage.getByPlaceholder("页面、域名或目录").fill("Rootline React Fixture")
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByPlaceholder("页面、域名或目录").fill("不存在的采集页面")
+  await expect(historyPage.getByText("没有匹配的采集记录。调整搜索词或时间范围后重试。")).toBeVisible()
+  await historyPage.getByRole("button", { name: "清除筛选" }).click()
+  await expect(historyRecord).toBeVisible()
+  const historyCount = historyPage.locator(".history-count")
+  await historyPage.getByRole("button", { name: /时间范围/ }).click()
+  await historyPage.getByRole("button", { name: "今天" }).click()
+  await expect(historyRecord).toBeVisible()
+  const generatedDate = await historyRecord.locator("time").getAttribute("datetime")
+  if (!generatedDate) throw new Error("History record did not expose its generated datetime")
+  const localGeneratedDate = await historyPage.evaluate((value) => {
+    const date = new Date(value)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+  }, generatedDate)
+  await historyPage.getByRole("button", { name: /时间范围/ }).click()
+  await expect(historyPage.locator(".history-calendar-month")).toHaveCount(2)
+  for (const [width, visibleMonths] of [[414, 1], [768, 2], [1024, 2], [1280, 2]] as const) {
+    await historyPage.setViewportSize({ width, height: 800 })
+    expect(await historyPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width}px open date range overflow`).toBeLessThanOrEqual(1)
+    await expect(historyPage.locator(".history-calendar-month:visible")).toHaveCount(visibleMonths)
+  }
+  if (process.env.ROOTLINE_SCREENSHOTS === "1") {
+    await historyPage.screenshot({ path: "/tmp/rootline-history-date-range-1280.png", fullPage: false })
+  }
+  const generatedDayButton = historyPage.getByRole("button", { name: localGeneratedDate, exact: true }).first()
+  await generatedDayButton.click()
+  await historyPage.getByRole("button", { name: localGeneratedDate, exact: true }).first().click()
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByRole("button", { name: /时间范围/ }).click()
+  await historyPage.getByLabel("开始日期").fill("2099-01-01")
+  await historyPage.getByLabel("结束日期").fill("2099-01-01")
+  await expect(historyCount).toHaveText(/^0 \/ \d+ 条$/)
+  await historyPage.getByRole("button", { name: "清除日期筛选" }).click()
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByRole("button", { name: /时间范围/ }).click()
+  await historyPage.getByLabel("开始日期").fill(localGeneratedDate)
+  await historyPage.getByLabel("结束日期").fill(localGeneratedDate)
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByRole("button", { name: "近 7 天" }).click()
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByRole("button", { name: /时间范围/ }).click()
+  await historyPage.getByRole("button", { name: "近 30 天" }).click()
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByRole("button", { name: "清除筛选" }).click()
+  await expect(historyRecord).toBeVisible()
+  await historyPage.getByRole("button", { name: /时间范围/ }).click()
+  await historyPage.getByRole("button", { name: "全部" }).click()
+  await expect(historyRecord).toBeVisible()
+  await expect(historyRecord.getByRole("button", { name: "查看报告" })).toBeEnabled()
+  await expect(historyRecord.getByRole("button", { name: "下载报告" })).toBeEnabled()
+  await expect(historyRecord.getByRole("button", { name: "复制 AI 上下文" })).toBeEnabled()
+  const previousHistoryPages = new Set(context.pages())
+  await historyRecord.getByRole("button", { name: "查看报告" }).click()
+  const historyCapturePage = await waitForCapturePage(previousHistoryPages)
+  await historyCapturePage.close()
+  await expect(historyRecord).toBeVisible()
   await historyRecord.getByRole("button", { name: "复制 AI 上下文" }).click()
   await expect(historyPage.getByText(/AI 上下文已复制/)).toBeVisible()
   await expect(historyPage.getByText(/AI 上下文已复制/)).toBeHidden({ timeout: 4_000 })
-  await historyRecord.getByRole("button", { name: "重新导出报告" }).click()
-  await expect(historyPage.getByText(/原保存位置重新导出/)).toBeVisible()
+  await historyRecord.getByRole("button", { name: "下载报告" }).click()
+  await expect(historyPage.getByText(/报告已下载到/)).toBeVisible({ timeout: 15_000 })
   if (process.env.ROOTLINE_SCREENSHOTS === "1") {
     await historyPage.setViewportSize({ width: 1280, height: 800 })
     await historyPage.screenshot({ path: "/tmp/rootline-history-1280.png", fullPage: false })
   }
-  for (const width of [320, 375, 414, 768]) {
+  for (const [width, columns] of [[320, 1], [375, 1], [414, 1], [768, 2], [1280, 3]] as const) {
     await historyPage.setViewportSize({ width, height: 820 })
     expect(await historyPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${width}px history overflow`).toBeLessThanOrEqual(1)
+    expect(await historyPage.locator(".history-list").evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length), `${width}px history columns`).toBe(columns)
   }
   await historyPage.close()
 
@@ -890,6 +965,18 @@ test("captures, recovers after worker restart and page refresh, reviews, and exp
     const active = await chrome.runtime.sendMessage({ type: "GET_ACTIVE_STATE" })
     return active?.data?.session?.id ?? null
   })
+  const completedSession = previousSessionId
+    ? await capturePage.evaluate(async (sessionId) => {
+        const response = await chrome.runtime.sendMessage({ type: "GET_SESSION", sessionId })
+        return response?.ok && response.data ? response.data as RootlineSession : null
+      }, previousSessionId)
+    : null
+  if (!completedSession) throw new Error("Completed session metadata unavailable")
+  await showCompletion(completedSession, completedSession.tabId)
+  await expect(completion.getByRole("button", { name: "关闭采集完成提示" })).toBeVisible()
+  await completion.getByRole("button", { name: "关闭采集完成提示" }).click()
+  await expect(fixturePage.locator("#rootline-runtime-overlay")).toHaveCount(0)
+  await showCompletion(completedSession, completedSession.tabId)
   await completion.getByRole("button", { name: "重新标注" }).click()
   await expect(fixturePage.locator("#rootline-runtime-overlay").locator("[data-workflow]")).toBeVisible()
   const reannotated = await capturePage.evaluate(async (previousId) => {

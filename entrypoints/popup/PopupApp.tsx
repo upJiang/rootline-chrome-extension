@@ -24,6 +24,11 @@ import type { RootlineSession } from "../../src/lib/types"
 import { formatElapsedTime } from "../../src/lib/time"
 import { DEFAULT_RECORDING_MAX_DURATION_MS } from "../../src/lib/recording-settings"
 
+const REMOTE_SETTINGS_WINDOW_WIDTH = 700
+const REMOTE_SETTINGS_WINDOW_HEIGHT = 760
+const REMOTE_SETTINGS_TOOLBAR_OFFSET = 84
+const REMOTE_SETTINGS_EDGE_GAP = 14
+
 function hostLabel(value?: string): string {
   if (!value) return "未选择页面"
   try {
@@ -61,17 +66,33 @@ async function copyText(value: string): Promise<void> {
   }
 }
 
+async function remoteSettingsWindowPosition(): Promise<{ left?: number; top?: number }> {
+  const currentWindow = await chrome.windows.getCurrent().catch(() => null)
+  const left = currentWindow?.left
+  const top = currentWindow?.top
+  const width = currentWindow?.width
+  if (typeof left !== "number" || typeof top !== "number" || typeof width !== "number") return {}
+  return {
+    left: Math.round(Math.max(
+      left + REMOTE_SETTINGS_EDGE_GAP,
+      left + width - REMOTE_SETTINGS_WINDOW_WIDTH - REMOTE_SETTINGS_EDGE_GAP,
+    )),
+    top: Math.round(top + REMOTE_SETTINGS_TOOLBAR_OFFSET),
+  }
+}
+
 export function PopupApp() {
   const [state, setState] = useState<ActiveState | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const successTimer = useRef<number | null>(null)
+  const windowParams = useMemo(() => new URLSearchParams(window.location.search), [])
   const sourceTabId = useMemo(() => {
-    const value = new URLSearchParams(window.location.search).get("sourceTabId")
+    const value = windowParams.get("sourceTabId")
     const parsed = value === null ? Number.NaN : Number(value)
     return Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined
-  }, [])
+  }, [windowParams])
 
   const refresh = useCallback(async () => {
     try {
@@ -115,19 +136,30 @@ export function PopupApp() {
     }
   }
 
-  const openCosSettings = async () => {
+  const openCosSettingsWindow = async () => {
     try {
-      await chrome.windows.create({
+      // Chrome does not expose the toolbar icon's exact screen coordinates.
+      // Anchor the new popup to the current browser's top-right edge without
+      // updating or moving the source browser window.
+      const position = await remoteSettingsWindowPosition()
+      const created = await chrome.windows.create({
         focused: true,
-        height: 860,
+        height: REMOTE_SETTINGS_WINDOW_HEIGHT,
+        ...position,
         type: "popup",
         url: chrome.runtime.getURL("cos-settings.html"),
-        width: 760,
+        width: REMOTE_SETTINGS_WINDOW_WIDTH,
       })
+      if (created.id === undefined) return
+      // Closing the action popup is expected once the child receives focus;
+      // this does not affect the capture overlay running in the source tab.
+      window.close()
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "无法打开远程保存配置窗口。")
     }
   }
+
+  const openCosSettings = openCosSettingsWindow
 
   const setSaveMode = (mode: "local" | "remote") => run(`mode:${mode}`, async () => {
     if (mode === "remote" && !(state?.saveConfig?.provider === "aliyun-oss" ? state.saveConfig.aliyunOss : state?.saveConfig?.tencentCos ?? state?.saveConfig?.remote)) {

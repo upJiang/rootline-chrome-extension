@@ -1255,7 +1255,7 @@ async function copyText(value: string): Promise<void> {
   }
 }
 
-function setCompletionBusy(action: "copy" | "copy-link" | "export" | "open-remote" | "reannotate" | null): void {
+function setCompletionBusy(action: "copy" | "copy-link" | "export" | "open-remote" | "reannotate" | "review" | null): void {
   state.shadow?.querySelectorAll<HTMLButtonElement>("[data-complete-action], [data-remote-action]").forEach((button) => {
     button.disabled = action !== null
     button.dataset.state = button.dataset.action === action ? "loading" : "default"
@@ -1283,6 +1283,7 @@ async function openRemoteReport(): Promise<void> {
   setFeedback("")
   try {
     await request({ type: "OPEN_REMOTE_REPORT_FROM_PAGE", sessionId: state.sessionId })
+    cleanup()
   } catch (error) {
     setFeedback(error instanceof Error ? error.message : "远程报告打开失败。", "error")
   } finally {
@@ -1322,8 +1323,17 @@ async function exportReport(): Promise<void> {
   }
 }
 
-function openReview(): void {
-  if (state.sessionId) send({ type: "OPEN_REVIEW_FROM_PAGE", sessionId: state.sessionId })
+async function openReview(): Promise<void> {
+  if (!state.sessionId) return
+  setCompletionBusy("review")
+  setFeedback("")
+  try {
+    await request({ type: "OPEN_REVIEW_FROM_PAGE", sessionId: state.sessionId })
+    cleanup()
+  } catch (error) {
+    setFeedback(error instanceof Error ? error.message : "完整证据打开失败。", "error")
+    setCompletionBusy(null)
+  }
 }
 
 function hideCompletionOverlay(): void {
@@ -1485,6 +1495,7 @@ function commitFinish(): void {
 }
 
 function showComplete(session: RootlineSession): void {
+  state.sessionId = session.id
   state.completedSession = session
   if (!state.host || !state.shadow) createOverlay()
   if (state.host) {
@@ -1644,6 +1655,8 @@ function createOverlay(): void {
       .finish-progress::before { content: ""; width: 13px; height: 13px; flex: none; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
       .complete { position: fixed; right: 16px; bottom: 16px; z-index: 9; display: grid; width: min(390px, calc(100vw - 32px)); gap: 14px; padding: 16px; border: 1px solid var(--rl-rule); border-radius: 8px; background: #fff; box-shadow: 0 14px 36px rgba(15,23,42,.18); pointer-events: auto; }
       .complete-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .complete-close { display: inline-grid; width: 44px; min-width: 44px; height: 44px; place-items: center; border: 1px solid var(--rl-rule); border-radius: 8px; background: #fff; color: var(--rl-copy); font-size: 22px; line-height: 1; }
+      .complete-close:hover { border-color: var(--rl-rule-strong); background: var(--rl-paper-soft); color: var(--rl-ink); }
       .eyebrow { margin: 0 0 3px; color: var(--rl-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
       .complete-title { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.3; }
       .complete-summary { margin: 0; color: var(--rl-muted); }
@@ -1715,7 +1728,7 @@ function createOverlay(): void {
       <div class="editor-actions"><button class="danger" data-remove-annotation type="button">删除标注</button><button class="confirm" data-save-annotation type="button">确定</button></div>
     </section>
     <section aria-label="采集完成" class="complete" data-complete hidden>
-      <div class="complete-head"><div><p class="eyebrow">采集完成</p><h2 class="complete-title">本次证据已生成</h2></div></div>
+      <div class="complete-head"><div><p class="eyebrow">采集完成</p><h2 class="complete-title">本次证据已生成</h2></div><button aria-label="关闭采集完成提示" class="complete-close" data-close-complete title="关闭" type="button">&times;</button></div>
       <p class="complete-summary" data-complete-summary></p>
       <p class="complete-location"><span data-complete-location-label>文件保存位置</span><code data-complete-location>Chrome 下载目录/Rootline</code></p>
       <div aria-live="polite" class="feedback" data-complete-feedback hidden></div>
@@ -1761,9 +1774,10 @@ function createOverlay(): void {
   shadow.querySelector("[data-copy-context]")?.addEventListener("click", () => void copyContext())
   shadow.querySelector("[data-copy-report-link]")?.addEventListener("click", () => void copyReportLink())
   shadow.querySelector("[data-export-report]")?.addEventListener("click", () => void exportReport())
-  shadow.querySelector("[data-open-review]")?.addEventListener("click", openReview)
+  shadow.querySelector("[data-open-review]")?.addEventListener("click", () => void openReview())
   shadow.querySelector("[data-open-remote-report]")?.addEventListener("click", () => void openRemoteReport())
   shadow.querySelector("[data-reannotate]")?.addEventListener("click", () => void reannotate())
+  shadow.querySelector("[data-close-complete]")?.addEventListener("click", cleanup)
   const panel = shadow.querySelector<HTMLElement>("[data-panel]")
   const dragHandle = shadow.querySelector<HTMLElement>("[data-panel-drag-handle]")
   dragHandle?.addEventListener("pointerdown", startPanelDrag)

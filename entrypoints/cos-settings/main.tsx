@@ -43,6 +43,16 @@ export function CosSettingsApp() {
   const [feedback, setFeedback] = React.useState<Feedback | null>(null)
   const feedbackTimer = React.useRef<number | null>(null)
 
+  React.useEffect(() => {
+    // Chrome may initially reuse the host work-area bounds while the popup
+    // page is loading. Re-apply only compact dimensions after mount; never
+    // set left/top so the source page and capture overlay cannot move.
+    void chrome.windows.getCurrent().then((currentWindow) => {
+      if (currentWindow.id === undefined) return
+      return chrome.windows.update(currentWindow.id, { focused: true, height: 760, width: 700 })
+    }).catch(() => undefined)
+  }, [])
+
   const showFeedback = React.useCallback((next: Feedback) => {
     if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current)
     setFeedback(next)

@@ -44,6 +44,21 @@ export async function downloadArtifact(filename: string, url: string): Promise<C
   return { id, filename: item.filename }
 }
 
+export async function downloadArtifactUrl(filename: string, url: string): Promise<CompletedDownload> {
+  const parsed = new URL(url)
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("远程报告链接必须使用 HTTP 或 HTTPS。")
+  const safeFilename = normalizeDownloadFilename(filename)
+  const id = await chrome.downloads.download({
+    conflictAction: "overwrite",
+    filename: safeFilename,
+    saveAs: false,
+    url: parsed.toString(),
+  })
+  const item = await waitForDownload(id)
+  if (!item.filename) throw new Error("Chrome 没有返回已保存文件的绝对路径。")
+  return { id, filename: item.filename }
+}
+
 export async function cleanupDownloads(downloadIds: number[]): Promise<void> {
   await Promise.all(downloadIds.map(async (id) => {
     await chrome.downloads.removeFile(id).catch(() => undefined)

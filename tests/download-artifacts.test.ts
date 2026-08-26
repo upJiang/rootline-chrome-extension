@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { normalizeDownloadFilename, waitForDownload } from "../src/lib/download-artifacts"
+import { downloadArtifactUrl, normalizeDownloadFilename, waitForDownload } from "../src/lib/download-artifacts"
 
 let searchMock: ReturnType<typeof vi.fn<(query: chrome.downloads.DownloadQuery) => Promise<chrome.downloads.DownloadItem[]>>>
+let downloadMock: ReturnType<typeof vi.fn<(options: chrome.downloads.DownloadOptions) => Promise<number>>>
 
 describe("download artifacts", () => {
   beforeEach(() => {
     searchMock = vi.fn<(query: chrome.downloads.DownloadQuery) => Promise<chrome.downloads.DownloadItem[]>>()
-    vi.stubGlobal("chrome", { downloads: { search: searchMock } })
+    downloadMock = vi.fn<(options: chrome.downloads.DownloadOptions) => Promise<number>>()
+    vi.stubGlobal("chrome", { downloads: { download: downloadMock, search: searchMock } })
   })
 
   it("normalizes a relative artifact filename", () => {
@@ -29,5 +31,29 @@ describe("download artifacts", () => {
       error: "FILE_NO_SPACE",
     } as chrome.downloads.DownloadItem])
     await expect(waitForDownload(8, 1_000)).rejects.toThrow("FILE_NO_SPACE")
+  })
+
+  it("downloads a remote report into the Rootline record directory", async () => {
+    downloadMock.mockResolvedValue(12)
+    searchMock.mockResolvedValueOnce([{
+      id: 12,
+      state: "complete",
+      filename: "/Users/test/Downloads/Rootline/capture-1/report.html",
+    } as chrome.downloads.DownloadItem])
+
+    await expect(downloadArtifactUrl(
+      "Rootline/capture-1/report.html",
+      "https://example.com/report.html",
+    )).resolves.toMatchObject({ id: 12, filename: "/Users/test/Downloads/Rootline/capture-1/report.html" })
+    expect(downloadMock).toHaveBeenCalledWith(expect.objectContaining({
+      filename: "Rootline/capture-1/report.html",
+      url: "https://example.com/report.html",
+    }))
+  })
+
+  it("rejects remote report URLs outside HTTP and HTTPS", async () => {
+    await expect(downloadArtifactUrl("Rootline/capture-1/report.html", "file:///tmp/report.html"))
+      .rejects.toThrow("必须使用 HTTP 或 HTTPS")
+    expect(downloadMock).not.toHaveBeenCalled()
   })
 })

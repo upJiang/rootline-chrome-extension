@@ -1,19 +1,20 @@
 import "fake-indexeddb/auto"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { readStoredCaptureRecord, removeStoredCaptureRecord, saveStoredCaptureRecord } from "../src/lib/capture-history-store"
-import { rootlineReportSchema, updateCaptureRecordIssue } from "../src/lib/local-artifacts"
+import { listCaptureHistory, openCaptureRecording, rootlineReportSchema, updateCaptureRecordIssue } from "../src/lib/local-artifacts"
 import { createReport, serializeReportJson } from "../src/lib/report"
 import { makeSession } from "./helpers"
 
 const DIRECTORY_NAME = "rootline-capture-test"
 const downloadSearch = vi.fn(async () => [{ state: "complete", exists: true }] as chrome.downloads.DownloadItem[])
+const downloadOpen = vi.fn()
 const sendMessage = vi.fn()
 
 beforeEach(() => {
   downloadSearch.mockClear()
   sendMessage.mockClear()
   vi.stubGlobal("chrome", {
-    downloads: { search: downloadSearch },
+    downloads: { open: downloadOpen, search: downloadSearch },
     runtime: { sendMessage },
   })
 })
@@ -84,5 +85,47 @@ describe("local capture record validation", () => {
     expect(sendMessage).not.toHaveBeenCalled()
     expect(downloadSearch).toHaveBeenCalledTimes(3)
     expect(await readStoredCaptureRecord(DIRECTORY_NAME)).not.toBeNull()
+    expect((await listCaptureHistory()).find((item) => item.directoryName === DIRECTORY_NAME)?.captureDataUrl).toBe("data:image/png;base64,AA==")
+  })
+
+  it("translates missing downloads.open permission into a readable recording error", async () => {
+    const report = createReport({
+      ...makeSession(),
+      captureMode: "video",
+      recording: {
+        resultId: "recording-1",
+        fileName: "capture.webm",
+        mimeType: "video/webm;codecs=vp9",
+        startedAt: "2026-08-14T01:00:00.000Z",
+        durationMs: 12_000,
+        sizeBytes: 1_024,
+        width: 1280,
+        height: 720,
+        frameCount: 1,
+      },
+      localArtifacts: {
+        rootName: "Chrome 下载目录",
+        directoryName: DIRECTORY_NAME,
+        downloadRelativeDirectory: `Rootline/${DIRECTORY_NAME}`,
+        directoryPath: `/Users/mac/Downloads/Rootline/${DIRECTORY_NAME}`,
+        reportMarkdownPath: `/Users/mac/Downloads/Rootline/${DIRECTORY_NAME}/report.md`,
+        reportJsonPath: `/Users/mac/Downloads/Rootline/${DIRECTORY_NAME}/report.json`,
+        capturePath: `/Users/mac/Downloads/Rootline/${DIRECTORY_NAME}/capture.png`,
+        recordingPath: `/Users/mac/Downloads/Rootline/${DIRECTORY_NAME}/capture.webm`,
+        downloadIds: { markdown: 1, json: 2, capture: 3, recording: 4 },
+        savedAt: "2026-08-14T10:00:00.000Z",
+      },
+    })
+    await saveStoredCaptureRecord({
+      directoryName: DIRECTORY_NAME,
+      report,
+      captureDataUrl: "data:image/png;base64,AA==",
+      createdAt: report.generatedAt,
+      updatedAt: report.generatedAt,
+    })
+    downloadOpen.mockRejectedValue(new Error('The "downloads.open" permission is required'))
+
+    await expect(openCaptureRecording(DIRECTORY_NAME)).rejects.toThrow("当前扩展缺少打开下载文件的权限")
+    await expect(openCaptureRecording(DIRECTORY_NAME)).rejects.not.toThrow("downloads.open")
   })
 })

@@ -183,6 +183,7 @@ export interface CaptureHistoryItem {
   report?: RootlineReportV1
   location?: LocalArtifactLocation
   remoteLocation?: RemoteArtifactLocation
+  captureDataUrl?: string
   hasCapture: boolean
   hasRecording: boolean
   hasMarkdown: boolean
@@ -197,6 +198,7 @@ export interface CaptureRecord {
   report: RootlineReportV1
   location?: LocalArtifactLocation
   remoteLocation?: RemoteArtifactLocation
+  captureDataUrl?: string
   captureFile: File | null
   recordingFile: File | null
   hasMarkdown: boolean
@@ -357,6 +359,7 @@ async function recordFromStored(stored: StoredCaptureRecord): Promise<CaptureRec
     return {
       report,
       remoteLocation,
+      ...(stored.captureDataUrl ? { captureDataUrl: stored.captureDataUrl } : {}),
       captureFile,
       recordingFile: null,
       hasMarkdown: reportState !== "missing",
@@ -377,6 +380,7 @@ async function recordFromStored(stored: StoredCaptureRecord): Promise<CaptureRec
   return {
     report,
     location,
+    ...(stored.captureDataUrl ? { captureDataUrl: stored.captureDataUrl } : {}),
     captureFile,
     recordingFile: null,
     hasMarkdown: markdownState !== "missing",
@@ -404,6 +408,7 @@ export async function listCaptureHistory(): Promise<CaptureHistoryItem[]> {
         report: record.report,
         ...(record.location ? { location: record.location } : {}),
         ...(record.remoteLocation ? { remoteLocation: record.remoteLocation } : {}),
+        ...(record.captureDataUrl ? { captureDataUrl: record.captureDataUrl } : {}),
         hasCapture: record.captureState !== "missing",
         hasRecording: record.recordingState !== "missing",
         hasMarkdown: record.hasMarkdown,
@@ -503,13 +508,27 @@ export async function updateCaptureRecordIssue(directoryName: string, issue: Roo
 export async function openCaptureRecording(directoryName: string): Promise<ArtifactAvailability> {
   const record = await readCaptureRecord(directoryName)
   if (record.remoteLocation?.recordingUrl) {
-    await chrome.tabs.create({ url: record.remoteLocation.recordingUrl })
+    try {
+      await chrome.tabs.create({ url: record.remoteLocation.recordingUrl })
+    } catch {
+      throw new Error("无法打开远程录屏：远程录屏链接可能已经失效，请检查云端文件后重试。")
+    }
     return "available"
   }
   if (!record.location) return "missing"
   const downloadId = record.location.downloadIds?.recording
   if (typeof downloadId !== "number") return record.recordingState
   const state = await downloadAvailability(downloadId)
-  if (state === "available") await chrome.downloads.open(downloadId)
+  if (state === "available") {
+    try {
+      await chrome.downloads.open(downloadId)
+    } catch (error) {
+      const detail = error instanceof Error ? error.message.toLowerCase() : ""
+      if (detail.includes("permission") || detail.includes("权限")) {
+        throw new Error("无法打开本地录屏：当前扩展缺少打开下载文件的权限，请重新加载最新版本后重试。")
+      }
+      throw new Error("无法打开本地录屏：Chrome 拒绝打开该下载文件，请确认文件仍存在后重试。")
+    }
+  }
   return state
 }
