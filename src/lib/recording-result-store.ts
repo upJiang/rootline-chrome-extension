@@ -1,3 +1,5 @@
+import { t } from "./i18n"
+
 export interface StoredRecordingFrame {
   id: string
   capturedAt: number
@@ -46,7 +48,7 @@ function openRecordingDatabase(): Promise<IDBDatabase> {
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORE_NAME)) request.result.createObjectStore(STORE_NAME, { keyPath: "id" })
     }
-    request.onerror = () => reject(request.error ?? new Error("录制临时数据库打开失败。"))
+    request.onerror = () => reject(request.error ?? new Error(t("errorRecordingDbOpen")))
     request.onsuccess = () => resolve(request.result)
   })
 }
@@ -60,9 +62,9 @@ function runStoreRequest<TResult>(
     const transaction = db.transaction(STORE_NAME, mode)
     const request = createRequest(transaction.objectStore(STORE_NAME))
     let result: TResult
-    request.onerror = () => reject(request.error ?? new Error("录制临时数据读写失败。"))
+    request.onerror = () => reject(request.error ?? new Error(t("errorRecordingDbIo")))
     request.onsuccess = () => { result = request.result }
-    transaction.onerror = () => reject(transaction.error ?? new Error("录制临时数据事务失败。"))
+    transaction.onerror = () => reject(transaction.error ?? new Error(t("errorRecordingDbTransaction")))
     transaction.oncomplete = () => resolve(result!)
   })
 }

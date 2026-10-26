@@ -1612,5 +1612,413 @@
   },
   "settingsAliyunWarning": {
     "message": "若测试返回 403，检查 RAM 对象权限、Bucket 访问权限、Region 和 CORS。公共读用于 AI 读取，切勿开启公共读写。"
+  },
+  "popupUnsupportedDetail": {
+    "message": "Rootline 只能采集普通 HTTP/HTTPS 网页；Chrome 内部页、扩展商店和 PDF 不支持注入采集器。"
+  },
+  "pageUntitled": {
+    "message": "未命名页面"
+  },
+  "pageUserAgentPending": {
+    "message": "等待页面采集器上报"
+  },
+  "errorCaptureInProgress": {
+    "message": "当前页面已有另一种采集正在进行，请先完成或放弃。"
+  },
+  "errorOverlayNotVisible": {
+    "message": "页面采集面板没有成功显示，请重试。"
+  },
+  "errorConfigureProvider": {
+    "message": "请先配置{provider}。"
+  },
+  "errorInjectFailed": {
+    "message": "无法向当前页面注入 Rootline 采集器。"
+  },
+  "errorReannotateOnlyFinished": {
+    "message": "只有已完成的采集可以重新标注。"
+  },
+  "errorSessionMismatch": {
+    "message": "页面会话校验失败。"
+  },
+  "errorReconnectFailed": {
+    "message": "无法重新连接当前页面。"
+  },
+  "errorProviderConfigMissing": {
+    "message": "{provider} 配置不存在，请重新配置后重试。"
+  },
+  "errorRemoteUploadFailed": {
+    "message": "远程对象存储上传失败。"
+  },
+  "errorLocalWriteFailed": {
+    "message": "本地采集文件写入失败。"
+  },
+  "errorSessionExpired": {
+    "message": "采集会话不存在或已经过期。"
+  },
+  "errorRecordingUnusable": {
+    "message": "本次录屏没有生成可用的视频，请重新录制。"
+  },
+  "errorToolbarHiddenFailed": {
+    "message": "无法确认 Rootline 工具条已经隐藏，请重试。"
+  },
+  "errorNoExportRecord": {
+    "message": "本次采集没有可重新导出的记录。"
+  },
+  "errorReexportFailed": {
+    "message": "报告重新导出失败。"
+  },
+  "errorRemoteTestFailed": {
+    "message": "远程对象存储连接测试失败。"
+  },
+  "errorCosTestFailed": {
+    "message": "腾讯云 COS 连接测试失败。"
+  },
+  "errorNoRemoteLink": {
+    "message": "本次采集没有远程报告链接。"
+  },
+  "errorSessionEnded": {
+    "message": "页面会话已经结束。"
+  },
+  "errorCaptureEnded": {
+    "message": "采集会话已经结束。"
+  },
+  "errorRecordingSyncFailed": {
+    "message": "录屏停止状态同步失败。"
+  },
+  "errorProgressSource": {
+    "message": "远程保存进度消息来源校验失败。"
+  },
+  "errorProgressSyncFailed": {
+    "message": "远程保存进度同步失败。"
+  },
+  "errorDownloadSource": {
+    "message": "下载消息来源校验失败。"
+  },
+  "errorFileSaveFailed": {
+    "message": "文件保存失败。"
+  },
+  "errorDownloadCleanupSource": {
+    "message": "下载清理消息校验失败。"
+  },
+  "errorDownloadCleanupFailed": {
+    "message": "不完整下载清理失败。"
+  },
+  "errorScreenshotDenied": {
+    "message": "浏览器未授权截图"
+  },
+  "errorEvidenceSaveFailed": {
+    "message": "本次证据未能保存：{message}"
+  },
+  "errorElementLine": {
+    "message": "元素 {index}：{text}"
+  },
+  "recordingFrameLabel": {
+    "message": "标注元素 {index}"
+  },
+  "boundaryCaptureWindow": {
+    "message": "控制台和网络证据只覆盖用户主动开始采集后的时间窗口。"
+  },
+  "boundaryPrivacy": {
+    "message": "未采集 Cookie、本地存储、密码字段和浏览历史。"
+  },
+  "boundaryFrame": {
+    "message": "跨域 iframe 与 closed shadow root 内部不可读取。"
+  },
+  "boundarySnapshotUnavailable": {
+    "message": "页面可能已刷新或关闭，结束时快照未能完整更新。"
+  },
+  "boundaryRemoteHistory": {
+    "message": "远程报告已上传，但当前浏览器未能保存这条本地历史索引。"
+  },
+  "runtimeReactTimeout": {
+    "message": "React 运行信息读取超时。"
+  },
+  "runtimeReactUnavailable": {
+    "message": "当前元素未暴露 React Fiber；生产构建或非 React 页面会出现此情况。"
+  },
+  "runtimeTargetGone": {
+    "message": "目标元素已离开页面。"
+  },
+  "errorOffscreenRecordingFailed": {
+    "message": "后台录屏失败。"
+  },
+  "errorCaptureProcessingFailed": {
+    "message": "采集文件处理失败。"
+  },
+  "errorRecordingExecuteFailed": {
+    "message": "后台录屏执行失败。"
+  },
+  "errorRecordingAlreadyActive": {
+    "message": "已有 Rootline 录屏正在进行，请先停止当前录制。"
+  },
+  "errorRecordingNotStarted": {
+    "message": "后台录屏没有成功启动。"
+  },
+  "errorRecordingSessionSaveFailed": {
+    "message": "录屏已经开始，但采集会话没有保存成功。"
+  },
+  "errorRecordingTempMissing": {
+    "message": "录屏结果没有成功保存到本地临时存储。"
+  },
+  "errorRecordingSessionMissing": {
+    "message": "录屏结果已生成，但采集会话不存在。"
+  },
+  "errorDisplayMediaUnsupported": {
+    "message": "当前浏览器不支持整屏录制。"
+  },
+  "errorNoVideoTrack": {
+    "message": "没有获得可用的屏幕视频流。"
+  },
+  "errorRecordingCanvasFailed": {
+    "message": "无法初始化录制画布。"
+  },
+  "errorDownloadFilename": {
+    "message": "下载文件名必须是相对于 Chrome 下载目录的路径。"
+  },
+  "errorDownloadFilenameSegment": {
+    "message": "下载文件名包含无效的目录段。"
+  },
+  "errorDownloadRecordMissing": {
+    "message": "Chrome 没有返回下载记录。"
+  },
+  "errorDownloadInterrupted": {
+    "message": "文件下载中断：{detail}"
+  },
+  "errorDownloadInterruptedBare": {
+    "message": "文件下载中断。"
+  },
+  "errorUnknown": {
+    "message": "未知错误"
+  },
+  "errorDownloadTimeout": {
+    "message": "文件保存超过 30 秒仍未完成，请检查 Chrome 下载设置后重试。"
+  },
+  "errorDownloadPathMissing": {
+    "message": "Chrome 没有返回已保存文件的绝对路径。"
+  },
+  "errorRemoteUrlProtocol": {
+    "message": "远程报告链接必须使用 HTTP 或 HTTPS。"
+  },
+  "errorLocalPathMissing": {
+    "message": "Chrome 没有返回有效的本地文件路径。"
+  },
+  "errorOffscreenUnsupported": {
+    "message": "当前 Chrome 版本不支持后台录制和本地文件生成。"
+  },
+  "errorCaptureCanvasFailed": {
+    "message": "浏览器无法创建截图画布。"
+  },
+  "errorScreenshotFormat": {
+    "message": "标注截图格式无效。"
+  },
+  "errorReportDirectoryMissing": {
+    "message": "采集报告缺少本地目录信息。"
+  },
+  "errorScreenshotMissing": {
+    "message": "没有可写入的页面截图。"
+  },
+  "errorRecordingTempLostLocal": {
+    "message": "录屏临时结果已经丢失，无法写入 capture.webm。"
+  },
+  "errorRecordLocationMissing": {
+    "message": "采集记录缺少文件位置信息。"
+  },
+  "errorLocalLocationMissing": {
+    "message": "采集记录缺少本地文件位置。"
+  },
+  "errorRecordGone": {
+    "message": "采集记录不存在或本地索引已经被清理。"
+  },
+  "errorRemoteRecordNeedsProvider": {
+    "message": "该记录是远程报告，请在远程保存配置中选择原来的云服务商后重新导出。"
+  },
+  "errorRemoteRecordingOpenFailed": {
+    "message": "无法打开远程录屏：远程录屏链接可能已经失效，请检查云端文件后重试。"
+  },
+  "errorLocalRecordingPermission": {
+    "message": "无法打开本地录屏：当前扩展缺少打开下载文件的权限，请重新加载最新版本后重试。"
+  },
+  "errorLocalRecordingOpenFailed": {
+    "message": "无法打开本地录屏：Chrome 拒绝打开该下载文件，请确认文件仍存在后重试。"
+  },
+  "errorRemoteStageFailed": {
+    "message": "{stage}失败：{message}"
+  },
+  "remoteStageAnnotatedShot": {
+    "message": "生成远程标注截图"
+  },
+  "remoteStageReadRecording": {
+    "message": "读取录屏临时文件"
+  },
+  "remoteStageUploadRecording": {
+    "message": "上传录屏"
+  },
+  "remoteStageUploadReport": {
+    "message": "上传远程报告"
+  },
+  "errorUploadScreenshotMissing": {
+    "message": "没有可上传的页面截图。"
+  },
+  "errorRecordingTempLostRemote": {
+    "message": "录屏临时结果已经丢失，无法上传 capture.webm。"
+  },
+  "errorRemoteRecordGone": {
+    "message": "远程采集记录不存在或截图缓存已经被清理。"
+  },
+  "errorRemoteConfigMissing": {
+    "message": "远程配置不存在，请重新配置后重试。"
+  },
+  "errorRemoteConfigMismatch": {
+    "message": "当前远程配置与这条历史记录不一致。请切换回原来的 Bucket、Region 和访问域名后重试。"
+  },
+  "errorObjectPrefixSegment": {
+    "message": "对象前缀包含无效目录段。"
+  },
+  "errorCustomDomainHttps": {
+    "message": "自定义访问域名必须使用 HTTPS。"
+  },
+  "errorCosPublicRead": {
+    "message": "测试文件已上传，但无法公开读取。请将存储桶访问权限改为“公有读、私有写”，不要选择“公有读写”。"
+  },
+  "errorCosForcedDownload": {
+    "message": "COS 当前启用了“强制下载/下载文件”，report.html 会被浏览器直接下载。请在 COS 控制台关闭强制下载，并重新测试连接。"
+  },
+  "errorCosReadMismatch": {
+    "message": "COS 测试文件读取结果不一致，请检查访问域名配置。"
+  },
+  "errorCosDeleteFailed": {
+    "message": "测试文件已上传并可读取，但删除失败。请为当前腾讯云密钥补充当前对象前缀的删除权限。"
+  },
+  "errorOssPublicRead": {
+    "message": "测试文件已上传，但无法公开读取。请将 OSS 访问权限改为“公共读、私有写”，不要选择公共读写。"
+  },
+  "errorOssForcedDownload": {
+    "message": "OSS 当前启用了强制下载，请将响应处置设置为 inline 后重新测试连接。"
+  },
+  "errorOssReadMismatch": {
+    "message": "OSS 测试文件读取结果不一致，请检查访问域名配置。"
+  },
+  "errorOssDeleteFailed": {
+    "message": "测试文件已上传并可读取，但删除失败。请补充当前对象前缀的 DeleteObject 权限。"
+  },
+  "errorDiagnostic": {
+    "message": "（{detail}）"
+  },
+  "errorCosInvalidAccessKey": {
+    "message": "腾讯云 COS 不识别当前 SecretId，请确认密钥仍处于启用状态{diagnostic}。"
+  },
+  "errorCosSignatureMismatch": {
+    "message": "腾讯云 COS 请求签名不匹配{diagnostic}。请确认电脑系统时间准确，并检查 Bucket、Region 与刚才测试成功的配置一致；这不等同于 SecretKey 无效。"
+  },
+  "errorCosAccessDenied": {
+    "message": "腾讯云 COS 拒绝访问{diagnostic}。请检查子账号是否拥有 COS 对象权限（PutObject、GetObject、HeadObject、DeleteObject）。QcloudCollApiKeyManageAccess 只管理 API 密钥，不包含 COS 读写权限；同时检查 Bucket、Region 和 CORS 配置。"
+  },
+  "errorCosBucketMissing": {
+    "message": "找不到腾讯云 COS 存储桶{diagnostic}，请检查 Bucket 和 Region。"
+  },
+  "errorCosTimeout": {
+    "message": "腾讯云 COS 请求超时{diagnostic}。Rootline 已核对远程对象但未确认上传完成，请检查网络后重试。"
+  },
+  "errorCosNetwork": {
+    "message": "无法连接腾讯云 COS{diagnostic}，请检查网络和 CORS 是否允许 PUT、GET、HEAD、DELETE、OPTIONS。"
+  },
+  "errorCosUploadFailed": {
+    "message": "腾讯云 COS 上传失败，请检查配置后重试。"
+  },
+  "errorCosCleanupFailed": {
+    "message": "腾讯云 COS 文件清理失败。"
+  },
+  "errorOssInvalidAccessKey": {
+    "message": "阿里云 OSS 不识别当前 AccessKey ID{diagnostic}，请确认密钥仍处于启用状态。"
+  },
+  "errorOssSignatureMismatch": {
+    "message": "阿里云 OSS 请求签名不匹配{diagnostic}，请检查 Region、Bucket 和本机系统时间。"
+  },
+  "errorOssAccessDenied": {
+    "message": "阿里云 OSS 拒绝访问{diagnostic}，请检查 RAM 子用户是否拥有 rootline/* 的 PutObject、GetObject、HeadObject、DeleteObject 权限，以及 CORS 配置。"
+  },
+  "errorOssBucketMissing": {
+    "message": "找不到阿里云 OSS Bucket{diagnostic}，请检查 Bucket 和 Region。"
+  },
+  "errorOssNetwork": {
+    "message": "无法连接阿里云 OSS，请检查网络和 CORS 是否允许 PUT、GET、HEAD、DELETE、OPTIONS。"
+  },
+  "errorOssUploadFailed": {
+    "message": "阿里云 OSS 上传失败，请检查配置后重试。"
+  },
+  "errorOssCleanupFailed": {
+    "message": "阿里云 OSS 文件清理失败。"
+  },
+  "errorScreenshotUnreadable": {
+    "message": "无法读取页面截图。"
+  },
+  "errorScreenMetadataTimeout": {
+    "message": "等待屏幕视频元数据超时。"
+  },
+  "errorScreenStreamUnreadable": {
+    "message": "无法读取屏幕视频流。"
+  },
+  "recordingActivePage": {
+    "message": "正在录制的页面"
+  },
+  "errorHistoryDbOpen": {
+    "message": "无法打开 Rootline 采集历史数据库。"
+  },
+  "errorHistoryOperation": {
+    "message": "Rootline 采集历史操作失败。"
+  },
+  "errorHistoryTransaction": {
+    "message": "Rootline 采集历史事务失败。"
+  },
+  "errorRecordingDbOpen": {
+    "message": "录制临时数据库打开失败。"
+  },
+  "errorRecordingDbIo": {
+    "message": "录制临时数据读写失败。"
+  },
+  "errorRecordingDbTransaction": {
+    "message": "录制临时数据事务失败。"
+  },
+  "errorRecordingInterrupted": {
+    "message": "录屏进程已中断，请放弃本次采集后重新录制。"
+  },
+  "errorRecordingNoFile": {
+    "message": "录屏已停止，但没有生成可用的视频文件。"
+  },
+  "errorRecordingLimitStopFailed": {
+    "message": "达到最长时长后停止录屏失败。"
+  },
+  "errorRecordingResultUnsaved": {
+    "message": "录屏已停止但结果未能保存。"
+  },
+  "recordingFrameEnded": {
+    "message": "录屏结束"
+  },
+  "settingsBucketTencent": {
+    "message": "Bucket 应为名称-APPID，例如 rootline-1250000000。"
+  },
+  "settingsRegionTencent": {
+    "message": "Region 格式不正确，例如 ap-guangzhou。"
+  },
+  "settingsSecretIdInvalid": {
+    "message": "请输入有效的 SecretId。"
+  },
+  "settingsSecretKeyInvalid": {
+    "message": "请输入有效的 SecretKey。"
+  },
+  "settingsBucketAliyun": {
+    "message": "Bucket 格式不正确。"
+  },
+  "settingsRegionAliyun": {
+    "message": "Region 格式不正确，例如 cn-guangzhou。"
+  },
+  "settingsAccessKeyIdInvalid": {
+    "message": "请输入有效的 AccessKey ID。"
+  },
+  "settingsAccessKeySecretInvalid": {
+    "message": "请输入有效的 AccessKey Secret。"
+  },
+  "settingsPublicUrlInvalid": {
+    "message": "自定义访问域名必须是完整的 HTTPS 地址。"
   }
 }

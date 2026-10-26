@@ -117,3 +117,16 @@ export function resetLocaleForTests(): void {
   listeners.clear()
   storageWatchStarted = false
 }
+
+const knownCopyIndex = new Map<string, MessageKey>()
+for (const catalog of [messages.zh_CN, messages.en]) {
+  for (const key of Object.keys(catalog) as MessageKey[]) {
+    const value = catalog[key]
+    if (!knownCopyIndex.has(value)) knownCopyIndex.set(value, key)
+  }
+}
+
+export function localizeKnownCopy(text: string): string {
+  const key = knownCopyIndex.get(text)
+  return key ? t(key) : text
+}

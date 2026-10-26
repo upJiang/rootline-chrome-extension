@@ -1,3 +1,4 @@
+import { t } from "./i18n"
 import { ensureRootlineOffscreenDocument } from "./offscreen"
 import {
   RECORDING_ACTIVE_STORAGE_KEY,
@@ -27,7 +28,7 @@ let stopPromise: Promise<RootlineSession> | null = null
 async function offscreenRequest<T>(message: object): Promise<T> {
   await ensureRootlineOffscreenDocument()
   const response = await chrome.runtime.sendMessage(message)
-  if (!response?.ok) throw new Error(response?.error ?? "后台录屏执行失败。")
+  if (!response?.ok) throw new Error(response?.error ?? t("errorRecordingExecuteFailed"))
   return response.data as T
 }
 
@@ -38,7 +39,7 @@ export async function readActiveRecording(): Promise<ActiveRecordingRuntime | nu
   return {
     sessionId: value.sessionId,
     tabId: value.tabId,
-    pageTitle: typeof value.pageTitle === "string" ? value.pageTitle : "正在录制的页面",
+    pageTitle: typeof value.pageTitle === "string" ? value.pageTitle : t("recordingActivePage"),
     startedAt: value.startedAt,
     maxDurationMs: value.maxDurationMs,
   }
@@ -46,7 +47,7 @@ export async function readActiveRecording(): Promise<ActiveRecordingRuntime | nu
 
 export async function startSessionRecording(session: RootlineSession, maxDurationMs: number): Promise<RootlineSession> {
   const active = await readActiveRecording()
-  if (active && active.sessionId !== session.id) throw new Error("已有 Rootline 录屏正在进行，请先停止当前录制。")
+  if (active && active.sessionId !== session.id) throw new Error(t("errorRecordingAlreadyActive"))
   if (session.recordingState?.status === "recording") return session
 
   const response = await offscreenRequest<StartRecordingResponse>({
@@ -54,7 +55,7 @@ export async function startSessionRecording(session: RootlineSession, maxDuratio
     sessionId: session.id,
     maxDurationMs,
   })
-  if (!response.active || !response.resultId || typeof response.startedAt !== "number") throw new Error("后台录屏没有成功启动。")
+  if (!response.active || !response.resultId || typeof response.startedAt !== "number") throw new Error(t("errorRecordingNotStarted"))
   try {
     const startedAt = new Date(response.startedAt).toISOString()
     const runtime: ActiveRecordingRuntime = {
@@ -76,7 +77,7 @@ export async function startSessionRecording(session: RootlineSession, maxDuratio
         maxDurationMs,
       }
     })
-    if (!updated) throw new Error("录屏已经开始，但采集会话没有保存成功。")
+    if (!updated) throw new Error(t("errorRecordingSessionSaveFailed"))
     await notifyTab(updated)
     return updated
   } catch (error) {
@@ -109,7 +110,7 @@ async function stopSessionRecordingOnce(
   reason: "manual" | "timeout" | "sharing-ended",
 ): Promise<RootlineSession> {
   const session = await readSession(sessionId)
-  if (!session) throw new Error("采集会话不存在或已经过期。")
+  if (!session) throw new Error(t("errorSessionExpired"))
   if (session.recording && session.recordingState?.status === "stopped") return session
   const response = await offscreenRequest<OffscreenRecordingResult>({
     type: "ROOTLINE_OFFSCREEN_STOP_RECORDING",
@@ -138,7 +139,7 @@ async function stopSessionRecordingOnce(
         })),
       })
     }
-    throw new Error("录屏结果没有成功保存到本地临时存储。")
+    throw new Error(t("errorRecordingTempMissing"))
   }
   return applyStoppedRecording(sessionId, response.recording)
 }
@@ -177,7 +178,7 @@ export async function reconcileActiveRecording(): Promise<void> {
           ...current.recordingState,
           status: "failed",
           stoppedAt: new Date().toISOString(),
-          error: "录屏进程已中断，请放弃本次采集后重新录制。",
+          error: t("errorRecordingInterrupted"),
         }
       })
       await clearActiveRecording()
@@ -228,7 +229,7 @@ export async function handleOffscreenRecordingEnded(message: OffscreenRecordingE
       ...current.recordingState,
       status: "failed",
       stoppedAt: new Date().toISOString(),
-      error: message.error ?? "录屏已停止，但没有生成可用的视频文件。",
+      error: message.error ?? t("errorRecordingNoFile"),
     }
   })
   await clearActiveRecording()
@@ -242,7 +243,7 @@ export async function stopRecordingAtLimit(): Promise<void> {
     await handleOffscreenRecordingEnded({
       type: "ROOTLINE_OFFSCREEN_RECORDING_ENDED",
       sessionId: active.sessionId,
-      error: error instanceof Error ? error.message : "达到最长时长后停止录屏失败。",
+      error: error instanceof Error ? error.message : t("errorRecordingLimitStopFailed"),
     })
   })
 }
@@ -264,7 +265,7 @@ async function applyStoppedRecording(sessionId: string, recording: RecordingEvid
     }
   })
   await clearActiveRecording()
-  if (!session) throw new Error("录屏结果已生成，但采集会话不存在。")
+  if (!session) throw new Error(t("errorRecordingSessionMissing"))
   await notifyTab(session)
   return session
 }

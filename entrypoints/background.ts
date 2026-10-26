@@ -1,4 +1,5 @@
 import { defineBackground } from "wxt/utils/define-background"
+import { loadStoredLocale, providerName, t } from "../src/lib/i18n"
 import type {
   ActiveState,
   ExtensionRequest,
@@ -63,7 +64,9 @@ import {
   type AliyunOssConfig,
 } from "../src/lib/types"
 
-const UNSUPPORTED_PAGE_MESSAGE = "Rootline 只能采集普通 HTTP/HTTPS 网页；Chrome 内部页、扩展商店和 PDF 不支持注入采集器。"
+function unsupportedPageMessage(): string {
+  return t("popupUnsupportedDetail")
+}
 
 function supportedUrl(value?: string): boolean {
   if (!value) return false
@@ -79,7 +82,7 @@ function initialPage(tab: chrome.tabs.Tab): PageInfo {
   const url = tab.url ?? ""
   return {
     url: redactUrl(url),
-    title: redactText(tab.title ?? "未命名页面"),
+    title: redactText(tab.title ?? t("pageUntitled")),
     origin: (() => {
       try {
         return new URL(url).origin
@@ -88,7 +91,7 @@ function initialPage(tab: chrome.tabs.Tab): PageInfo {
       }
     })(),
     viewport: { width: 0, height: 0, devicePixelRatio: 1 },
-    userAgent: "等待页面采集器上报",
+    userAgent: t("pageUserAgentPending"),
     language: "",
     capturedAt: new Date().toISOString(),
   }
@@ -152,10 +155,10 @@ async function startSession(
   maxDurationMs?: number,
 ): Promise<RootlineSession> {
   const tab = await chrome.tabs.get(tabId)
-  if (!supportedUrl(tab.url)) throw new Error(UNSUPPORTED_PAGE_MESSAGE)
+  if (!supportedUrl(tab.url)) throw new Error(unsupportedPageMessage())
   const existing = await readSessionForTab(tabId)
   if (existing && existing.status === "capturing") {
-    if ((existing.captureMode ?? "screenshot") !== captureMode) throw new Error("当前页面已有另一种采集正在进行，请先完成或放弃。")
+    if ((existing.captureMode ?? "screenshot") !== captureMode) throw new Error(t("errorCaptureInProgress"))
     await injectRuntime(tabId)
     const started = await sendToTab<RuntimeStartResponse>(tabId, {
       type: "ROOTLINE_START",
@@ -166,7 +169,7 @@ async function startSession(
       ...(existing.recordingState ? { recordingState: existing.recordingState } : {}),
       ...(existing.recording ? { recording: existing.recording } : {}),
     })
-    if (!started?.ok || !started.visible) throw new Error("页面采集面板没有成功显示，请重试。")
+    if (!started?.ok || !started.visible) throw new Error(t("errorOverlayNotVisible"))
     if (captureMode === "video" && existing.recordingState?.status !== "recording" && !existing.recording) {
       return startSessionRecording(existing, normalizeRecordingMaxDurationMs(maxDurationMs))
     }
@@ -174,7 +177,7 @@ async function startSession(
   }
   if (existing && ["reviewing", "exported"].includes(existing.status)) return existing
   const saveConfig = await readCaptureSaveConfig()
-  if (saveConfig.mode === "remote" && !activeRemoteConfig(saveConfig)) throw new Error(`请先配置${saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。`)
+  if (saveConfig.mode === "remote" && !activeRemoteConfig(saveConfig)) throw new Error(t("errorConfigureProvider", { provider: providerName(saveConfig.provider) }))
   const session = createSession(tab, captureMode, saveConfig.mode)
   await saveSession(session)
   try {
@@ -186,10 +189,10 @@ async function startSession(
       targets: [],
       captureMode,
     })
-    if (!started?.ok || !started.visible) throw new Error("页面采集面板没有成功显示，请重试。")
+    if (!started?.ok || !started.visible) throw new Error(t("errorOverlayNotVisible"))
   } catch (error) {
     await removeSession(session.id)
-    throw new Error(error instanceof Error ? error.message : "无法向当前页面注入 Rootline 采集器。")
+    throw new Error(error instanceof Error ? error.message : t("errorInjectFailed"))
   }
   if (captureMode !== "video") return session
   try {
@@ -204,14 +207,14 @@ async function startSession(
 async function reannotateSession(sessionId: string, senderTabId?: number): Promise<RootlineSession> {
   const previous = await readSession(sessionId)
   if (!previous || !["reviewing", "exported"].includes(previous.status)) {
-    throw new Error("只有已完成的采集可以重新标注。")
+    throw new Error(t("errorReannotateOnlyFinished"))
   }
-  if (typeof senderTabId === "number" && senderTabId !== previous.tabId) throw new Error("页面会话校验失败。")
+  if (typeof senderTabId === "number" && senderTabId !== previous.tabId) throw new Error(t("errorSessionMismatch"))
   const tabId = previous.tabId
   const currentTab = await chrome.tabs.get(tabId)
-  if (!supportedUrl(currentTab.url)) throw new Error(UNSUPPORTED_PAGE_MESSAGE)
+  if (!supportedUrl(currentTab.url)) throw new Error(unsupportedPageMessage())
   const saveConfig = await readCaptureSaveConfig()
-  if (saveConfig.mode === "remote" && !activeRemoteConfig(saveConfig)) throw new Error(`请先配置${saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。`)
+  if (saveConfig.mode === "remote" && !activeRemoteConfig(saveConfig)) throw new Error(t("errorConfigureProvider", { provider: providerName(saveConfig.provider) }))
   const session = createSession(currentTab, "screenshot", saveConfig.mode)
   await sendToTab(tabId, { type: "ROOTLINE_CLEANUP" })
   await saveSession(session)
@@ -224,7 +227,7 @@ async function reannotateSession(sessionId: string, senderTabId?: number): Promi
       targets: [],
       captureMode: "screenshot",
     })
-    if (!started?.ok || !started.visible) throw new Error("页面采集面板没有成功显示，请重试。")
+    if (!started?.ok || !started.visible) throw new Error(t("errorOverlayNotVisible"))
   } catch (error) {
     await removeSession(session.id)
     await saveSession(previous)
@@ -232,7 +235,7 @@ async function reannotateSession(sessionId: string, senderTabId?: number): Promi
     // fails, restore the completed action panel so the user can retry without
     // being left with a blank page.
     await sendToTab(tabId, { type: "ROOTLINE_SHOW_COMPLETE", session: previous }).catch(() => undefined)
-    throw new Error(error instanceof Error ? error.message : "无法重新连接当前页面。")
+    throw new Error(error instanceof Error ? error.message : t("errorReconnectFailed"))
   }
   return session
 }
@@ -246,20 +249,20 @@ async function writeSessionOffscreen(session: RootlineSession): Promise<{
   if (session.saveMode === "remote") {
     const saveConfig = await readCaptureSaveConfig()
     const config = activeRemoteConfig(saveConfig)
-    if (!config) throw new Error(`${saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"} 配置不存在，请重新配置后重试。`)
+    if (!config) throw new Error(t("errorProviderConfigMissing", { provider: providerName(saveConfig.provider) }))
     const response = (await chrome.runtime.sendMessage({
       type: "OFFSCREEN_WRITE_REMOTE_SESSION",
       session,
       config,
     } satisfies OffscreenWriteRemoteRequest)) as ExtensionResponse<{ report: RootlineReportV1; location: RemoteArtifactLocation }>
-    if (!response?.ok || !response.data) throw new Error(response?.error ?? "远程对象存储上传失败。")
+    if (!response?.ok || !response.data) throw new Error(response?.error ?? t("errorRemoteUploadFailed"))
     return { report: response.data.report, remoteLocation: response.data.location }
   }
   const response = (await chrome.runtime.sendMessage({
     type: "OFFSCREEN_WRITE_SESSION",
     session,
   } satisfies OffscreenWriteRequest)) as ExtensionResponse<{ report: RootlineReportV1; location: LocalArtifactLocation }>
-  if (!response?.ok || !response.data) throw new Error(response?.error ?? "本地采集文件写入失败。")
+  if (!response?.ok || !response.data) throw new Error(response?.error ?? t("errorLocalWriteFailed"))
   return { report: response.data.report, localLocation: response.data.location }
 }
 
@@ -291,13 +294,13 @@ function mergeNetwork(session: RootlineSession, events: NetworkEvidence[]): void
 
 async function finishSession(sessionId: string): Promise<RootlineSession> {
   const beforeFinish = await readSession(sessionId)
-  if (!beforeFinish) throw new Error("采集会话不存在或已经过期。")
+  if (!beforeFinish) throw new Error(t("errorSessionExpired"))
   if (beforeFinish.captureMode === "video" && beforeFinish.recordingState?.status === "recording") {
     await stopSessionRecording(sessionId)
   }
   const recordingReady = await readSession(sessionId)
   if (recordingReady?.captureMode === "video" && !recordingReady.recording) {
-    throw new Error(recordingReady.recordingState?.error ?? "本次录屏没有生成可用的视频，请重新录制。")
+    throw new Error(recordingReady.recordingState?.error ?? t("errorRecordingUnusable"))
   }
   let finishError: Error | null = null
   let recordingResultToClear: string | null = null
@@ -314,21 +317,21 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
     }
     if (!current.issue.description.trim()) {
       const actualResult = current.targets
-        .map((target, index) => target.annotation?.actualResult.trim() ? `元素 ${index + 1}：${target.annotation.actualResult.trim()}` : "")
+        .map((target, index) => target.annotation?.actualResult.trim() ? t("errorElementLine", { index: index + 1, text: target.annotation.actualResult.trim() }) : "")
         .filter(Boolean)
         .join("\n")
       current.issue.description = truncateText(redactText(actualResult), 2_000).value
     }
     if (!current.issue.expectedResult.trim()) {
       const expectedResult = current.targets
-        .map((target, index) => target.annotation?.expectedResult.trim() ? `元素 ${index + 1}：${target.annotation.expectedResult.trim()}` : "")
+        .map((target, index) => target.annotation?.expectedResult.trim() ? t("errorElementLine", { index: index + 1, text: target.annotation.expectedResult.trim() }) : "")
         .filter(Boolean)
         .join("\n")
       current.issue.expectedResult = truncateText(redactText(expectedResult), 2_000).value
     }
     try {
       const prepared = await sendToTab<RuntimePrepareFinishResponse>(current.tabId, { type: "ROOTLINE_PREPARE_FINISH" })
-      if (!prepared?.ok || !prepared.hidden) throw new Error("无法确认 Rootline 工具条已经隐藏，请重试。")
+      if (!prepared?.ok || !prepared.hidden) throw new Error(t("errorToolbarHiddenFailed"))
       const image = typeof current.windowId === "number"
         ? await chrome.tabs.captureVisibleTab(current.windowId, { format: "png" })
         : await chrome.tabs.captureVisibleTab({ format: "png" })
@@ -365,14 +368,14 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
       current.screenshot = {}
       current.boundaries.push({
         code: "capture-save-failed",
-        message: `本次证据未能保存：${error instanceof Error ? error.message : "浏览器未授权截图"}`,
+        message: t("errorEvidenceSaveFailed", { message: error instanceof Error ? error.message : t("errorScreenshotDenied") }),
       })
-      finishError = error instanceof Error ? error : new Error("浏览器未授权截图")
+      finishError = error instanceof Error ? error : new Error(t("errorScreenshotDenied"))
       return
     }
     current.status = "reviewing"
   })
-  if (!session) throw new Error("采集会话不存在或已经过期。")
+  if (!session) throw new Error(t("errorSessionExpired"))
   if (finishError) throw finishError
   if (recordingResultToClear) await clearStoredRecordingResult(recordingResultToClear).catch(() => undefined)
   await sendToTab(session.tabId, { type: "ROOTLINE_SHOW_COMPLETE", session })
@@ -381,9 +384,9 @@ async function finishSession(sessionId: string): Promise<RootlineSession> {
 
 async function exportSession(sessionId: string): Promise<string> {
   const session = await readSession(sessionId)
-  if (!session) throw new Error("采集会话不存在或已经过期。")
+  if (!session) throw new Error(t("errorSessionExpired"))
   const directory = recordNameForSession(session)
-  if (!directory) throw new Error("本次采集没有可重新导出的记录。")
+  if (!directory) throw new Error(t("errorNoExportRecord"))
   await ensureRootlineOffscreenDocument()
   const response = session.remoteArtifacts
     ? (await chrome.runtime.sendMessage({
@@ -394,7 +397,7 @@ async function exportSession(sessionId: string): Promise<string> {
         type: "OFFSCREEN_REEXPORT_RECORD",
         directoryName: directory,
       } satisfies OffscreenReexportRequest)) as ExtensionResponse
-  if (!response?.ok) throw new Error(response?.error ?? "报告重新导出失败。")
+  if (!response?.ok) throw new Error(response?.error ?? t("errorReexportFailed"))
   await mutateSession(sessionId, (current) => {
     current.status = "exported"
   })
@@ -419,7 +422,7 @@ async function activeState(tabId?: number): Promise<ActiveState> {
   return {
     tab: tab ? { ...(typeof tab.id === "number" ? { id: tab.id } : {}), ...(tab.title ? { title: tab.title } : {}), ...(tab.url ? { url: tab.url } : {}) } : null,
     supported: supportedUrl(tab?.url),
-    ...(!supportedUrl(tab?.url) ? { unsupportedReason: UNSUPPORTED_PAGE_MESSAGE } : {}),
+    ...(!supportedUrl(tab?.url) ? { unsupportedReason: unsupportedPageMessage() } : {}),
     session: session ? summarizeSession(session) : null,
     recording,
     saveConfig,
@@ -433,6 +436,7 @@ function recordNameForSession(session: RootlineSession): string | null {
 }
 
 async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.MessageSender): Promise<ExtensionResponse<unknown>> {
+  await loadStoredLocale()
   if (message.type === "GET_ACTIVE_STATE") return { ok: true, data: await activeState(message.tabId) }
   if (message.type === "GET_SAVE_CONFIG") return { ok: true, data: await readCaptureSaveConfig() }
   if (message.type === "SET_SAVE_MODE") return { ok: true, data: await setCaptureSaveMode(message.mode) }
@@ -446,7 +450,7 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
     const config = message.config.provider === "aliyun-oss" ? normalizeAliyunOssConfig(message.config) : normalizeTencentCosConfig(message.config)
     await ensureRootlineOffscreenDocument()
     const response = (await chrome.runtime.sendMessage({ type: "OFFSCREEN_TEST_REMOTE", config } satisfies OffscreenTestRemoteRequest)) as ExtensionResponse<RemoteStorageConfig>
-    if (!response?.ok) throw new Error(response?.error ?? "远程对象存储连接测试失败。")
+    if (!response?.ok) throw new Error(response?.error ?? t("errorRemoteTestFailed"))
     const verified = response.data as RemoteStorageConfig
     if (verified.provider === "aliyun-oss") await saveAliyunOssConfig(verified)
     else await saveTencentCosConfig(verified)
@@ -462,7 +466,7 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
       type: "OFFSCREEN_TEST_COS",
       config,
     } satisfies OffscreenTestCosRequest)) as ExtensionResponse
-    if (!response?.ok) throw new Error(response?.error ?? "腾讯云 COS 连接测试失败。")
+    if (!response?.ok) throw new Error(response?.error ?? t("errorCosTestFailed"))
     // The test uses the values currently entered in the settings form. Save
     // those verified values so the next capture cannot use stale credentials.
     const verified = normalizeTencentCosConfig((response.data as TencentCosConfig | undefined) ?? config)
@@ -471,13 +475,13 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
   }
   if (message.type === "GET_SESSION") {
     const session = await readSession(message.sessionId)
-    return session ? { ok: true, data: session } : { ok: false, error: "采集会话不存在或已经过期。" }
+    return session ? { ok: true, data: session } : { ok: false, error: t("errorSessionExpired") }
   }
   if (message.type === "START_SESSION") return { ok: true, data: await startSession(message.tabId, message.captureMode, message.maxDurationMs) }
   if (message.type === "STOP_RECORDING") {
     const sourceSession = await readSession(message.sessionId)
     if (sender.tab?.id !== undefined && sender.tab.id !== sourceSession?.tabId) {
-      return { ok: false, error: "页面会话校验失败。" }
+      return { ok: false, error: t("errorSessionMismatch") }
     }
     const session = await stopSessionRecording(message.sessionId)
     await chrome.tabs.update(session.tabId, { active: true }).catch(() => undefined)
@@ -491,7 +495,7 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
   if (message.type === "FINISH_SESSION") return { ok: true, data: await finishSession(message.sessionId) }
   if (message.type === "FINISH_FROM_PAGE") {
     const session = await readSession(message.sessionId)
-    if (!session || sender.tab?.id !== session.tabId) return { ok: false, error: "页面会话校验失败。" }
+    if (!session || sender.tab?.id !== session.tabId) return { ok: false, error: t("errorSessionMismatch") }
     return { ok: true, data: await finishSession(message.sessionId) }
   }
   if (
@@ -502,13 +506,13 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
   ) {
     const session = await readSession(message.sessionId)
     if (!session || sender.tab?.id !== session.tabId || !["reviewing", "exported"].includes(session.status)) {
-      return { ok: false, error: "页面会话校验失败。" }
+      return { ok: false, error: t("errorSessionMismatch") }
     }
     if (message.type === "GET_AI_CONTEXT_FROM_PAGE") {
       return { ok: true, data: session.remoteArtifacts ? buildRemoteAiContext(session.remoteArtifacts) : buildReportMarkdown(createReport(session)) }
     }
     if (message.type === "OPEN_REMOTE_REPORT_FROM_PAGE") {
-      if (!session.remoteArtifacts?.reportUrl) return { ok: false, error: "本次采集没有远程报告链接。" }
+      if (!session.remoteArtifacts?.reportUrl) return { ok: false, error: t("errorNoRemoteLink") }
       await chrome.tabs.create({ url: session.remoteArtifacts.reportUrl })
       return { ok: true }
     }
@@ -542,26 +546,26 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
         notes: truncateText(redactText(message.issue.notes), 4_000).value,
       }
     })
-    if (!session) return { ok: false, error: "采集会话不存在或已经过期。" }
+    if (!session) return { ok: false, error: t("errorSessionExpired") }
     return { ok: true, data: session }
   }
   if (message.type === "MARK_EXPORTED") {
     const session = await mutateSession(message.sessionId, (current) => {
       current.status = "exported"
     })
-    if (!session) return { ok: false, error: "采集会话不存在或已经过期。" }
+    if (!session) return { ok: false, error: t("errorSessionExpired") }
     return { ok: true }
   }
   if (message.type === "RUNTIME_HEARTBEAT") {
     const session = await readSession(message.sessionId)
     return session && sender.tab?.id === session.tabId && session.status === "capturing"
       ? { ok: true }
-      : { ok: false, error: "页面会话已经结束。" }
+      : { ok: false, error: t("errorSessionEnded") }
   }
 
   const session = await mutateSession(message.sessionId, (current) => {
     if (sender.tab?.id !== current.tabId || current.status !== "capturing") {
-      throw new Error("页面会话校验失败。")
+      throw new Error(t("errorSessionMismatch"))
     }
     if (message.type === "RUNTIME_READY") current.page = message.page
     if (message.type === "RUNTIME_EVENTS") {
@@ -574,19 +578,20 @@ async function handleMessage(message: ExtensionRequest, sender: chrome.runtime.M
       if (index >= 0) current.targets[index] = target
       else if (current.targets.length >= MAX_TARGETS) current.limits.targetLimitReached = true
       else current.targets.push(target)
-      void markRecordingFrame(current.id, `标注元素 ${current.targets.findIndex((item) => item.id === target.id) + 1}`)
+      void markRecordingFrame(current.id, t("recordingFrameLabel", { index: current.targets.findIndex((item) => item.id === target.id) + 1 }))
     }
     if (message.type === "TARGET_REMOVED") {
       current.targets = current.targets.filter((item) => item.id !== message.targetId)
     }
   })
   if (!session) {
-    return { ok: false, error: "页面会话校验失败。" }
+    return { ok: false, error: t("errorSessionMismatch") }
   }
   return { ok: true, data: summarizeSession(session) }
 }
 
 export default defineBackground(() => {
+  void loadStoredLocale()
   void cleanExpiredSessions()
   void reconcileActiveRecording()
   chrome.runtime.onStartup.addListener(() => {
@@ -595,53 +600,60 @@ export default defineBackground(() => {
   })
   chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
     if (isOffscreenRecordingEndedMessage(message)) {
-      handleOffscreenRecordingEnded(message)
+      void loadStoredLocale()
+        .then(() => handleOffscreenRecordingEnded(message))
         .then(() => sendResponse({ ok: true }))
-        .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "录屏停止状态同步失败。" }))
+        .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : t("errorRecordingSyncFailed") }))
       return true
     }
     const type = (message as { type?: string }).type
     if (type === "OFFSCREEN_WRITE_SESSION" || type === "OFFSCREEN_WRITE_REMOTE_SESSION" || type === "OFFSCREEN_REEXPORT_RECORD" || type === "OFFSCREEN_REEXPORT_REMOTE_RECORD" || type === "OFFSCREEN_TEST_COS" || type === "OFFSCREEN_TEST_REMOTE") return false
     if (type === "OFFSCREEN_REMOTE_SAVE_PROGRESS") {
+      void loadStoredLocale().then(() => {
       const request = message as OffscreenRemoteSaveProgressMessage
       if (sender.id !== chrome.runtime.id || typeof request.sessionId !== "string") {
-        sendResponse({ ok: false, error: "远程保存进度消息来源校验失败。" })
-        return false
+        sendResponse({ ok: false, error: t("errorProgressSource") })
+        return
       }
-      readSession(request.sessionId)
+      void readSession(request.sessionId)
         .then(async (session) => {
-          if (!session || session.status !== "capturing") return sendResponse({ ok: false, error: "采集会话已经结束。" })
+          if (!session || session.status !== "capturing") return sendResponse({ ok: false, error: t("errorCaptureEnded") })
           await sendToTab(session.tabId, { type: "ROOTLINE_UPDATE_FINISH_PROGRESS", progress: request.progress })
           sendResponse({ ok: true })
         })
-        .catch(() => sendResponse({ ok: false, error: "远程保存进度同步失败。" }))
+        .catch(() => sendResponse({ ok: false, error: t("errorProgressSyncFailed") }))
+      })
       return true
     }
     if (type === "OFFSCREEN_DOWNLOAD_ARTIFACT") {
+      void loadStoredLocale().then(() => {
       const request = message as OffscreenDownloadRequest
       if (sender.id !== chrome.runtime.id || (!request.url.startsWith("blob:") && !request.url.startsWith("data:"))) {
-        sendResponse({ ok: false, error: "下载消息来源校验失败。" })
-        return false
+        sendResponse({ ok: false, error: t("errorDownloadSource") })
+        return
       }
-      downloadArtifact(request.filename, request.url)
+      void downloadArtifact(request.filename, request.url)
         .then((result) => sendResponse({ ok: true, data: result }))
-        .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "文件保存失败。" }))
+        .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : t("errorFileSaveFailed") }))
+      })
       return true
     }
     if (type === "OFFSCREEN_CLEANUP_DOWNLOADS") {
+      void loadStoredLocale().then(() => {
       const downloadIds = (message as { downloadIds?: unknown }).downloadIds
       if (sender.id !== chrome.runtime.id || !Array.isArray(downloadIds) || downloadIds.some((id) => !Number.isInteger(id))) {
-        sendResponse({ ok: false, error: "下载清理消息校验失败。" })
-        return false
+        sendResponse({ ok: false, error: t("errorDownloadCleanupSource") })
+        return
       }
-      cleanupDownloads(downloadIds as number[])
+      void cleanupDownloads(downloadIds as number[])
         .then(() => sendResponse({ ok: true }))
-        .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "不完整下载清理失败。" }))
+        .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : t("errorDownloadCleanupFailed") }))
+      })
       return true
     }
     handleMessage(message as ExtensionRequest, sender)
       .then(sendResponse)
-      .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Rootline 操作失败。" }))
+      .catch((error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : t("commonOperationFailed") }))
     return true
   })
   chrome.alarms.onAlarm.addListener((alarm) => {

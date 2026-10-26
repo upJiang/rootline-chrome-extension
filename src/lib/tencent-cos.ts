@@ -1,4 +1,5 @@
 import COS from "cos-js-sdk-v5"
+import { getLocale, t, type MessageKey } from "./i18n"
 import type { TencentCosConfig } from "./types"
 
 function cosClient(config: TencentCosConfig): COS {
@@ -63,31 +64,20 @@ function cosDiagnostic(error: unknown): string {
     ...(status ? [`status=${status}`] : []),
     ...(requestId ? [`requestId=${requestId}`] : []),
   ]
-  return fields.length ? `（${fields.join("，")}）` : ""
+  if (!fields.length) return ""
+  return t("errorDiagnostic", { detail: fields.join(getLocale() === "en" ? ", " : "，") })
 }
 
-function friendlyCosError(error: unknown, fallback: string): Error {
+function friendlyCosError(error: unknown, fallback: MessageKey): Error {
   const value = error as { code?: string; statusCode?: number; message?: string }
   const diagnostic = cosDiagnostic(error)
-  if (value?.code === "InvalidAccessKeyId") {
-    return new Error(`腾讯云 COS 不识别当前 SecretId，请确认密钥仍处于启用状态${diagnostic}。`)
-  }
-  if (value?.code === "SignatureDoesNotMatch") {
-    return new Error(`腾讯云 COS 请求签名不匹配${diagnostic}。请确认电脑系统时间准确，并检查 Bucket、Region 与刚才测试成功的配置一致；这不等同于 SecretKey 无效。`)
-  }
-  if (value?.statusCode === 403 || value?.code === "AccessDenied") {
-    return new Error(`腾讯云 COS 拒绝访问${diagnostic}。请检查子账号是否拥有 COS 对象权限（PutObject、GetObject、HeadObject、DeleteObject）。QcloudCollApiKeyManageAccess 只管理 API 密钥，不包含 COS 读写权限；同时检查 Bucket、Region 和 CORS 配置。`)
-  }
-  if (value?.statusCode === 404 || value?.code === "NoSuchBucket") {
-    return new Error(`找不到腾讯云 COS 存储桶${diagnostic}，请检查 Bucket 和 Region。`)
-  }
-  if (value?.message?.toLowerCase().includes("timeout")) {
-    return new Error(`腾讯云 COS 请求超时${diagnostic}。Rootline 已核对远程对象但未确认上传完成，请检查网络后重试。`)
-  }
-  if (value?.message?.toLowerCase().includes("cors") || value?.message?.toLowerCase().includes("network")) {
-    return new Error(`无法连接腾讯云 COS${diagnostic}，请检查网络和 CORS 是否允许 PUT、GET、HEAD、DELETE、OPTIONS。`)
-  }
-  return new Error(`${fallback}${diagnostic}`)
+  if (value?.code === "InvalidAccessKeyId") return new Error(t("errorCosInvalidAccessKey", { diagnostic }))
+  if (value?.code === "SignatureDoesNotMatch") return new Error(t("errorCosSignatureMismatch", { diagnostic }))
+  if (value?.statusCode === 403 || value?.code === "AccessDenied") return new Error(t("errorCosAccessDenied", { diagnostic }))
+  if (value?.statusCode === 404 || value?.code === "NoSuchBucket") return new Error(t("errorCosBucketMissing", { diagnostic }))
+  if (value?.message?.toLowerCase().includes("timeout")) return new Error(t("errorCosTimeout", { diagnostic }))
+  if (value?.message?.toLowerCase().includes("cors") || value?.message?.toLowerCase().includes("network")) return new Error(t("errorCosNetwork", { diagnostic }))
+  return new Error(`${t(fallback)}${diagnostic}`)
 }
 
 function uploadBodySize(body: Blob | string): number {
@@ -150,7 +140,7 @@ export async function putCosObject(
       options.onProgress?.({ loaded: contentLength, total: contentLength, percent: 1 })
       return
     }
-    throw friendlyCosError(error, "腾讯云 COS 上传失败，请检查配置后重试。")
+    throw friendlyCosError(error, "errorCosUploadFailed")
   }
 }
 
@@ -158,7 +148,7 @@ export async function deleteCosObject(config: TencentCosConfig, key: string): Pr
   try {
     await cosClient(config).deleteObject({ Bucket: config.bucket, Region: config.region, Key: key })
   } catch (error) {
-    throw friendlyCosError(error, "腾讯云 COS 文件清理失败。")
+    throw friendlyCosError(error, "errorCosCleanupFailed")
   }
 }
 
@@ -174,13 +164,13 @@ export async function testTencentCosConnection(config: TencentCosConfig): Promis
     await putCosObject(config, key, body, "text/plain;charset=utf-8")
     const response = await fetch(`${buildCosObjectUrl(config, key)}?rootline-test=${Date.now()}`, { cache: "no-store" })
     if (!response.ok) {
-      throw new Error("测试文件已上传，但无法公开读取。请将存储桶访问权限改为“公有读、私有写”，不要选择“公有读写”。")
+      throw new Error(t("errorCosPublicRead"))
     }
     const disposition = response.headers.get("content-disposition")?.toLowerCase() ?? ""
     if (disposition.includes("attachment")) {
-      throw new Error("COS 当前启用了“强制下载/下载文件”，report.html 会被浏览器直接下载。请在 COS 控制台关闭强制下载，并重新测试连接。")
+      throw new Error(t("errorCosForcedDownload"))
     }
-    if ((await response.text()) !== content) throw new Error("COS 测试文件读取结果不一致，请检查访问域名配置。")
+    if ((await response.text()) !== content) throw new Error(t("errorCosReadMismatch"))
     return { ...config, verifiedAt: new Date().toISOString() }
   } catch (error) {
     operationError = error
@@ -190,7 +180,7 @@ export async function testTencentCosConnection(config: TencentCosConfig): Promis
       await deleteCosObject(config, key)
     } catch (error) {
       if (!operationError) {
-        throw new Error("测试文件已上传并可读取，但删除失败。请为当前腾讯云密钥补充当前对象前缀的删除权限。", { cause: error })
+        throw new Error(t("errorCosDeleteFailed"), { cause: error })
       }
     }
   }

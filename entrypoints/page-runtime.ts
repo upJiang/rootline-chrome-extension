@@ -1,3 +1,4 @@
+import { applyLocale, isLocale, t } from "../src/lib/i18n"
 import { redactBody, redactHeaders, redactText, redactUrl, truncateText } from "../src/lib/redaction"
 import type { ConsoleEvidence, NetworkEvidence, ReactRuntimeHint } from "../src/lib/types"
 import { defineUnlistedScript } from "wxt/utils/define-unlisted-script"
@@ -326,7 +327,7 @@ function inspectReact(element: Element): ReactRuntimeHint {
     available: Boolean(fiberKey),
     componentChain,
     propsKeys: Array.from(propsKeys).slice(0, 40),
-    ...(!fiberKey ? { boundary: "当前元素未暴露 React Fiber；生产构建或非 React 页面会出现此情况。" } : {}),
+    ...(!fiberKey ? { boundary: t("runtimeReactUnavailable") } : {}),
   }
 }
 
@@ -364,6 +365,8 @@ function install(): void {
   const onBridgeMessage = (event: MessageEvent) => {
     if (event.source !== window || !event.data || event.data.source !== "rootline-bridge") return
     const payload = event.data as Record<string, unknown>
+    if (isLocale(payload.locale)) applyLocale(payload.locale)
+    if (payload.type === "locale") return
     if (payload.type === "start" && typeof payload.sessionId === "string") {
       state.sessionId = payload.sessionId
       state.startedAt = typeof payload.startedAt === "string" ? payload.startedAt : new Date().toISOString()
@@ -381,7 +384,7 @@ function install(): void {
         type: "react-hint",
         sessionId: state.sessionId,
         requestId: payload.requestId,
-        hint: element ? inspectReact(element) : { available: false, componentChain: [], propsKeys: [], boundary: "目标元素已离开页面。" },
+        hint: element ? inspectReact(element) : { available: false, componentChain: [], propsKeys: [], boundary: t("runtimeTargetGone") },
       }, "*")
       return
     }

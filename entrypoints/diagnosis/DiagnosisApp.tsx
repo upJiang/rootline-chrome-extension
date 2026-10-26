@@ -24,7 +24,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "../../components/Brand"
 import { LocaleToggle, useI18n } from "../../components/LocaleToggle"
 import { Notice } from "../../components/Notice"
-import { formatDateTime, getLocale, providerName, t, type MessageKey } from "../../src/lib/i18n"
+import { formatDateTime, getLocale, localizeKnownCopy, providerName, t, type MessageKey } from "../../src/lib/i18n"
 import { createExportArtifacts, downloadArtifacts, renderAnnotatedCapture } from "../../src/lib/export"
 import { openCaptureRecording, readCaptureRecord, reexportCaptureRecord, updateCaptureRecordIssue } from "../../src/lib/local-artifacts"
 import { reexportRemoteCaptureRecord, updateRemoteCaptureRecordIssue } from "../../src/lib/remote-artifacts"
@@ -76,6 +76,22 @@ function translateMissing(items: string[]): string {
 
 function translateLevel(level: string): string {
   return level in LEVEL_LABELS ? t(LEVEL_LABELS[level as keyof typeof LEVEL_LABELS]) : level
+}
+
+function boundaryText(boundary: { code: string; message: string }): string {
+  switch (boundary.code) {
+    case "capture-window": return t("boundaryCaptureWindow")
+    case "privacy": return t("boundaryPrivacy")
+    case "frame-boundary": return t("boundaryFrame")
+    case "snapshot-unavailable": return t("boundarySnapshotUnavailable")
+    case "remote-history-unavailable": return t("boundaryRemoteHistory")
+    default: return localizeKnownCopy(boundary.message)
+  }
+}
+
+function frameLabel(label: string): string {
+  const match = /^(?:标注元素|Mark) (\d+)$/.exec(label)
+  return match?.[1] ? t("recordingFrameLabel", { index: match[1] }) : localizeKnownCopy(label)
 }
 
 async function request<T>(message: unknown): Promise<T> {
@@ -366,7 +382,7 @@ export function DiagnosisApp() {
     return (
       <main className="diagnosis-empty">
         <Brand />
-        <Notice title={t("diagnosisOpenFailed")} tone="error">{feedback?.message ?? t("diagnosisRecordUnavailable")}</Notice>
+        <Notice title={t("diagnosisOpenFailed")} tone="error">{feedback?.message ? localizeKnownCopy(feedback.message) : t("diagnosisRecordUnavailable")}</Notice>
       </main>
     )
   }
@@ -418,7 +434,7 @@ export function DiagnosisApp() {
 
       {feedback ? (
         <div className="feedback-strip">
-          <Notice title={feedback.message} tone={feedback.tone} />
+          <Notice title={localizeKnownCopy(feedback.message)} tone={feedback.tone} />
         </div>
       ) : null}
 
@@ -468,12 +484,12 @@ export function DiagnosisApp() {
               <div className="keyframe-track" aria-hidden="true" />
               {keyframes.map((frame, index) => (
                 <button
-                  aria-label={t("diagnosisSeek", { time: formatDuration(frame.offsetMs), label: frame.label ? t("diagnosisSeekLabel", { label: frame.label }) : "" })}
+                  aria-label={t("diagnosisSeek", { time: formatDuration(frame.offsetMs), label: frame.label ? t("diagnosisSeekLabel", { label: frameLabel(frame.label) }) : "" })}
                   className="keyframe-marker"
                   key={`${frame.offsetMs}-${index}`}
                   onClick={() => seekRecording(frame.offsetMs)}
                   style={{ left: `${Math.min(100, Math.max(0, frame.offsetMs / Math.max(1, session.recording?.durationMs ?? 1) * 100))}%` }}
-                  title={`${formatDuration(frame.offsetMs)}${frame.label ? ` · ${frame.label}` : ""}`}
+                  title={`${formatDuration(frame.offsetMs)}${frame.label ? ` · ${frameLabel(frame.label)}` : ""}`}
                   type="button"
                 />
               ))}
@@ -644,7 +660,7 @@ function TargetEvidence({ index, target }: { index: number; target: SelectedTarg
               [t("diagnosisComponentChain"), target.react.componentChain.join(" > ") || t("diagnosisComponentUnknown")],
               ["Props Keys", target.react.propsKeys.join(", ") || t("diagnosisPropsNone")],
             ]} />
-          ) : <p className="rl-muted m-0">{target.react?.boundary ?? t("diagnosisNoReact")}</p>}
+          ) : <p className="rl-muted m-0">{target.react?.boundary ? localizeKnownCopy(target.react.boundary) : t("diagnosisNoReact")}</p>}
         </div>
         <div className="subsection">
           <h3>{t("diagnosisCssRules")}</h3>
@@ -753,7 +769,7 @@ function EnvironmentPanel({ session }: { session: RootlineSession }) {
       <section className="environment-section">
         <h3><ShieldCheck aria-hidden="true" size={17} />{t("diagnosisGaps")}</h3>
         <ul className="boundary-list">
-          {session.boundaries.map((boundary) => <li key={`${boundary.code}-${boundary.message}`}>{boundary.message}</li>)}
+          {session.boundaries.map((boundary) => <li key={`${boundary.code}-${boundary.message}`}>{boundaryText(boundary)}</li>)}
           <li>{t("diagnosisDropped", { console: session.limits.consoleDropped, network: session.limits.networkDropped })}</li>
           <li>{t("diagnosisNotCollected")}</li>
         </ul>

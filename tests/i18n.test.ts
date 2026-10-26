@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { getLocale, loadStoredLocale, LOCALE_STORAGE_KEY, resetLocaleForTests, setLocale, subscribeLocale, t } from "../src/lib/i18n"
+import { getLocale, loadStoredLocale, localizeKnownCopy, LOCALE_STORAGE_KEY, resetLocaleForTests, setLocale, subscribeLocale, t } from "../src/lib/i18n"
 import { messages } from "../src/lib/messages"
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..")
@@ -59,6 +59,17 @@ describe("locale store", () => {
     for (const listener of listeners) listener({ [LOCALE_STORAGE_KEY]: { newValue: "zh_CN" } }, "local")
     expect(getLocale()).toBe("zh_CN")
     expect(t("popupStartAnnotate")).toBe("开始标注")
+  })
+
+  it("translates stored catalog sentences and keeps English free of Chinese", async () => {
+    const unsupported = messages.zh_CN.popupUnsupportedDetail
+    expect(localizeKnownCopy(unsupported)).toBe(unsupported)
+    expect(t("popupRemote")).toBe("远程")
+    await setLocale("en")
+    expect(localizeKnownCopy(unsupported)).toBe(messages.en.popupUnsupportedDetail)
+    expect(t("popupRemote")).toBe("Remote")
+    expect(t("popupLocal")).toBe("Local")
+    for (const value of Object.values(messages.en)) expect(value).not.toMatch(/[\u4e00-\u9fff]/)
   })
 
   it("keeps the Chinese and English catalogs aligned with the Chrome locale files", () => {

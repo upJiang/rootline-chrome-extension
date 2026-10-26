@@ -1,5 +1,5 @@
 import { collectTarget, updateTargetRect } from "../src/lib/capture/dom"
-import { getLocale, isMessageKey, loadStoredLocale, providerName, setLocale, subscribeLocale, t, type MessageKey, type MessageVars } from "../src/lib/i18n"
+import { getLocale, isMessageKey, loadStoredLocale, localizeKnownCopy, providerName, setLocale, subscribeLocale, t, type MessageKey, type MessageVars } from "../src/lib/i18n"
 import type { ExtensionRequest, ExtensionResponse, RemoteSaveProgress, RuntimePrepareFinishResponse, RuntimeSnapshotResponse, RuntimeStartResponse, TabRuntimeRequest } from "../src/lib/messaging"
 import { redactUrl } from "../src/lib/redaction"
 import type {
@@ -74,7 +74,8 @@ interface EditorState {
 }
 
 interface FeedbackReplay {
-  key: MessageKey
+  key?: MessageKey
+  raw?: string
   tone: "error" | "success" | "neutral"
   vars?: MessageVars
   targetLocked?: boolean
@@ -520,7 +521,7 @@ function inspectReact(element: Element, targetId: string): Promise<ReactRuntimeH
         available: false,
         componentChain: [],
         propsKeys: [],
-        boundary: "React 运行信息读取超时。",
+        boundary: t("runtimeReactTimeout"),
       })
     }, 500)
     const listener = (event: MessageEvent) => {
@@ -536,7 +537,7 @@ function inspectReact(element: Element, targetId: string): Promise<ReactRuntimeH
       resolve(event.data.hint as ReactRuntimeHint)
     }
     window.addEventListener("message", listener)
-    window.postMessage({ source: BRIDGE_SOURCE, type: "inspect-react", sessionId: state.sessionId, requestId, targetId }, "*")
+    window.postMessage({ source: BRIDGE_SOURCE, type: "inspect-react", sessionId: state.sessionId, requestId, targetId, locale: getLocale() }, "*")
   })
 }
 
@@ -574,15 +575,24 @@ function setMessage(key: MessageKey, tone: "error" | "success" | "neutral" = "ne
 }
 
 function setRawFeedback(message: string, tone: "error" | "success" | "neutral" = "neutral"): void {
-  state.feedbackReplay = null
-  setFeedback(message, tone)
+  state.feedbackReplay = { raw: message, tone }
+  setFeedback(localizeKnownCopy(message), tone)
 }
 
 function replayFeedback(): void {
   const replay = state.feedbackReplay
   if (!replay) return
+  if (replay.raw) {
+    setFeedback(localizeKnownCopy(replay.raw), replay.tone)
+    return
+  }
+  if (!replay.key) return
   const vars = replay.targetLocked && state.pendingTarget ? { label: targetLabel(state.pendingTarget) } : replay.vars
   setFeedback(t(replay.key, vars), replay.tone)
+}
+
+function postRuntimeLocale(): void {
+  window.postMessage({ source: BRIDGE_SOURCE, type: "locale", locale: getLocale() }, "*")
 }
 
 function applyStaticI18n(): void {
@@ -2030,7 +2040,7 @@ function start(message: Extract<TabRuntimeRequest, { type: "ROOTLINE_START" }>):
           cleanup()
           return
         }
-        window.postMessage({ source: BRIDGE_SOURCE, type: "heartbeat", sessionId }, "*")
+        window.postMessage({ source: BRIDGE_SOURCE, type: "heartbeat", sessionId, locale: getLocale() }, "*")
       })
       .catch(() => cleanup())
   }, 2_000)
@@ -2038,7 +2048,7 @@ function start(message: Extract<TabRuntimeRequest, { type: "ROOTLINE_START" }>):
   createOverlay()
   syncToolbar()
   syncMarkers()
-  window.postMessage({ source: BRIDGE_SOURCE, type: "start", sessionId: message.sessionId, startedAt: message.startedAt }, "*")
+  window.postMessage({ source: BRIDGE_SOURCE, type: "start", sessionId: message.sessionId, startedAt: message.startedAt, locale: getLocale() }, "*")
   send({ type: "RUNTIME_READY", sessionId: message.sessionId, page: pageInfo() })
   return { ok: true, visible: state.host?.style.display !== "none" }
 }
@@ -2055,8 +2065,11 @@ function installBridge(): void {
   globalThis.__ROOTLINE_BRIDGE_INSTALLED__ = true
   if (!localeWatchInstalled) {
     localeWatchInstalled = true
-    subscribeLocale(() => refreshOverlayLocale())
-    void loadStoredLocale()
+    subscribeLocale(() => {
+      refreshOverlayLocale()
+      postRuntimeLocale()
+    })
+    void loadStoredLocale().then(() => postRuntimeLocale())
   }
   window.addEventListener("message", (event) => {
     if (

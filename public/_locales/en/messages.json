@@ -1612,5 +1612,413 @@
   },
   "settingsAliyunWarning": {
     "message": "If the test returns 403, check RAM object permissions, bucket access, Region, and CORS. Public read lets an AI read the report. Do not enable public read-write."
+  },
+  "popupUnsupportedDetail": {
+    "message": "Rootline can only capture ordinary HTTP/HTTPS pages. Chrome internal pages, the Chrome Web Store, and PDFs cannot be captured."
+  },
+  "pageUntitled": {
+    "message": "Untitled page"
+  },
+  "pageUserAgentPending": {
+    "message": "Waiting for the page collector"
+  },
+  "errorCaptureInProgress": {
+    "message": "Another capture is already running on this page. Finish or discard it first."
+  },
+  "errorOverlayNotVisible": {
+    "message": "The capture panel did not appear. Try again."
+  },
+  "errorConfigureProvider": {
+    "message": "Configure {provider} first."
+  },
+  "errorInjectFailed": {
+    "message": "Could not inject the Rootline collector into this page."
+  },
+  "errorReannotateOnlyFinished": {
+    "message": "Only a finished capture can be annotated again."
+  },
+  "errorSessionMismatch": {
+    "message": "The page session could not be verified."
+  },
+  "errorReconnectFailed": {
+    "message": "Could not reconnect to this page."
+  },
+  "errorProviderConfigMissing": {
+    "message": "{provider} settings are missing. Configure them again and retry."
+  },
+  "errorRemoteUploadFailed": {
+    "message": "Could not upload to remote storage."
+  },
+  "errorLocalWriteFailed": {
+    "message": "Could not write the local capture files."
+  },
+  "errorSessionExpired": {
+    "message": "The capture session is missing or has expired."
+  },
+  "errorRecordingUnusable": {
+    "message": "This recording did not produce a usable video. Record it again."
+  },
+  "errorToolbarHiddenFailed": {
+    "message": "Could not confirm the Rootline toolbar was hidden. Try again."
+  },
+  "errorNoExportRecord": {
+    "message": "This capture has no record that can be exported again."
+  },
+  "errorReexportFailed": {
+    "message": "Could not export the report again."
+  },
+  "errorRemoteTestFailed": {
+    "message": "Could not test the remote storage connection."
+  },
+  "errorCosTestFailed": {
+    "message": "Could not test the Tencent COS connection."
+  },
+  "errorNoRemoteLink": {
+    "message": "This capture has no remote report link."
+  },
+  "errorSessionEnded": {
+    "message": "The page session has ended."
+  },
+  "errorCaptureEnded": {
+    "message": "The capture session has ended."
+  },
+  "errorRecordingSyncFailed": {
+    "message": "Could not sync the stopped recording."
+  },
+  "errorProgressSource": {
+    "message": "The remote save progress message could not be verified."
+  },
+  "errorProgressSyncFailed": {
+    "message": "Could not sync remote save progress."
+  },
+  "errorDownloadSource": {
+    "message": "The download message could not be verified."
+  },
+  "errorFileSaveFailed": {
+    "message": "Could not save the file."
+  },
+  "errorDownloadCleanupSource": {
+    "message": "The download cleanup message could not be verified."
+  },
+  "errorDownloadCleanupFailed": {
+    "message": "Could not clean up the incomplete download."
+  },
+  "errorScreenshotDenied": {
+    "message": "The browser did not allow the screenshot."
+  },
+  "errorEvidenceSaveFailed": {
+    "message": "Could not save this evidence: {message}"
+  },
+  "errorElementLine": {
+    "message": "Element {index}: {text}"
+  },
+  "recordingFrameLabel": {
+    "message": "Mark {index}"
+  },
+  "boundaryCaptureWindow": {
+    "message": "Console and network evidence only cover the time after you start capture."
+  },
+  "boundaryPrivacy": {
+    "message": "Cookies, local storage, password fields, and browsing history are not captured."
+  },
+  "boundaryFrame": {
+    "message": "Cross-origin iframes and closed shadow roots cannot be read."
+  },
+  "boundarySnapshotUnavailable": {
+    "message": "The page may have refreshed or closed, so the final snapshot is incomplete."
+  },
+  "boundaryRemoteHistory": {
+    "message": "The remote report was uploaded, but this browser could not save the local history entry."
+  },
+  "runtimeReactTimeout": {
+    "message": "Timed out while reading React runtime info."
+  },
+  "runtimeReactUnavailable": {
+    "message": "This element does not expose a React Fiber. Production builds and non-React pages do this."
+  },
+  "runtimeTargetGone": {
+    "message": "The target element is no longer on the page."
+  },
+  "errorOffscreenRecordingFailed": {
+    "message": "Background recording failed."
+  },
+  "errorCaptureProcessingFailed": {
+    "message": "Could not process the capture files."
+  },
+  "errorRecordingExecuteFailed": {
+    "message": "Could not run background recording."
+  },
+  "errorRecordingAlreadyActive": {
+    "message": "A Rootline recording is already in progress. Stop it first."
+  },
+  "errorRecordingNotStarted": {
+    "message": "Background recording did not start."
+  },
+  "errorRecordingSessionSaveFailed": {
+    "message": "Recording started, but the capture session was not saved."
+  },
+  "errorRecordingTempMissing": {
+    "message": "The recording was not saved to temporary storage."
+  },
+  "errorRecordingSessionMissing": {
+    "message": "The recording was created, but the capture session is missing."
+  },
+  "errorDisplayMediaUnsupported": {
+    "message": "This browser cannot record the full screen."
+  },
+  "errorNoVideoTrack": {
+    "message": "No usable screen video was provided."
+  },
+  "errorRecordingCanvasFailed": {
+    "message": "Could not prepare the recording canvas."
+  },
+  "errorDownloadFilename": {
+    "message": "The download filename must be a path inside the Chrome downloads folder."
+  },
+  "errorDownloadFilenameSegment": {
+    "message": "The download filename contains an invalid path segment."
+  },
+  "errorDownloadRecordMissing": {
+    "message": "Chrome did not return a download record."
+  },
+  "errorDownloadInterrupted": {
+    "message": "The file download was interrupted: {detail}"
+  },
+  "errorDownloadInterruptedBare": {
+    "message": "The file download was interrupted."
+  },
+  "errorUnknown": {
+    "message": "Unknown error"
+  },
+  "errorDownloadTimeout": {
+    "message": "Saving the file took longer than 30 seconds. Check Chrome's download settings and try again."
+  },
+  "errorDownloadPathMissing": {
+    "message": "Chrome did not return the saved file path."
+  },
+  "errorRemoteUrlProtocol": {
+    "message": "The remote report link must use HTTP or HTTPS."
+  },
+  "errorLocalPathMissing": {
+    "message": "Chrome did not return a valid local file path."
+  },
+  "errorOffscreenUnsupported": {
+    "message": "This Chrome version cannot record in the background or write local files."
+  },
+  "errorCaptureCanvasFailed": {
+    "message": "The browser could not create a screenshot canvas."
+  },
+  "errorScreenshotFormat": {
+    "message": "The annotated screenshot format is invalid."
+  },
+  "errorReportDirectoryMissing": {
+    "message": "The capture report is missing its local directory."
+  },
+  "errorScreenshotMissing": {
+    "message": "There is no page screenshot to write."
+  },
+  "errorRecordingTempLostLocal": {
+    "message": "The temporary recording is gone, so capture.webm cannot be written."
+  },
+  "errorRecordLocationMissing": {
+    "message": "The capture record is missing its file location."
+  },
+  "errorLocalLocationMissing": {
+    "message": "The capture record is missing its local file location."
+  },
+  "errorRecordGone": {
+    "message": "The capture record is missing or its local index was cleared."
+  },
+  "errorRemoteRecordNeedsProvider": {
+    "message": "This is a remote report. Select the original cloud provider in remote storage settings, then export again."
+  },
+  "errorRemoteRecordingOpenFailed": {
+    "message": "Could not open the remote recording. The link may have expired. Check the cloud file and try again."
+  },
+  "errorLocalRecordingPermission": {
+    "message": "Could not open the local recording. This extension is missing permission to open downloads. Reload the latest version and try again."
+  },
+  "errorLocalRecordingOpenFailed": {
+    "message": "Could not open the local recording. Chrome refused to open the download. Confirm the file still exists and try again."
+  },
+  "errorRemoteStageFailed": {
+    "message": "{stage} failed: {message}"
+  },
+  "remoteStageAnnotatedShot": {
+    "message": "Create the remote annotated screenshot"
+  },
+  "remoteStageReadRecording": {
+    "message": "Read the temporary recording"
+  },
+  "remoteStageUploadRecording": {
+    "message": "Upload the recording"
+  },
+  "remoteStageUploadReport": {
+    "message": "Upload the remote report"
+  },
+  "errorUploadScreenshotMissing": {
+    "message": "There is no page screenshot to upload."
+  },
+  "errorRecordingTempLostRemote": {
+    "message": "The temporary recording is gone, so capture.webm cannot be uploaded."
+  },
+  "errorRemoteRecordGone": {
+    "message": "The remote capture record is missing or its screenshot cache was cleared."
+  },
+  "errorRemoteConfigMissing": {
+    "message": "Remote settings are missing. Configure them again and retry."
+  },
+  "errorRemoteConfigMismatch": {
+    "message": "The current remote settings do not match this history record. Switch back to the original Bucket, Region, and domain, then retry."
+  },
+  "errorObjectPrefixSegment": {
+    "message": "The object prefix contains an invalid path segment."
+  },
+  "errorCustomDomainHttps": {
+    "message": "The custom domain must use HTTPS."
+  },
+  "errorCosPublicRead": {
+    "message": "The test file uploaded, but it is not publicly readable. Set the bucket to public read, private write. Do not choose public read-write."
+  },
+  "errorCosForcedDownload": {
+    "message": "COS is forcing downloads, so the browser will download report.html. Turn off forced download in the COS console and test the connection again."
+  },
+  "errorCosReadMismatch": {
+    "message": "The COS test file did not match. Check the access domain."
+  },
+  "errorCosDeleteFailed": {
+    "message": "The test file uploaded and could be read, but deleting it failed. Grant this Tencent key delete access for the object prefix."
+  },
+  "errorOssPublicRead": {
+    "message": "The test file uploaded, but it is not publicly readable. Set OSS access to public read, private write. Do not choose public read-write."
+  },
+  "errorOssForcedDownload": {
+    "message": "OSS is forcing downloads. Set the response content disposition to inline and test the connection again."
+  },
+  "errorOssReadMismatch": {
+    "message": "The OSS test file did not match. Check the access domain."
+  },
+  "errorOssDeleteFailed": {
+    "message": "The test file uploaded and could be read, but deleting it failed. Grant DeleteObject on the object prefix."
+  },
+  "errorDiagnostic": {
+    "message": " ({detail})"
+  },
+  "errorCosInvalidAccessKey": {
+    "message": "Tencent COS does not recognize this SecretId. Confirm the key is still enabled{diagnostic}."
+  },
+  "errorCosSignatureMismatch": {
+    "message": "The Tencent COS request signature does not match{diagnostic}. Confirm the computer clock is accurate, and that the Bucket and Region match the configuration that just tested successfully. This does not mean the SecretKey is invalid."
+  },
+  "errorCosAccessDenied": {
+    "message": "Tencent COS denied access{diagnostic}. Check that the sub-account has COS object permissions (PutObject, GetObject, HeadObject, DeleteObject). QcloudCollApiKeyManageAccess only manages API keys and does not include COS read/write access. Also check the Bucket, Region, and CORS settings."
+  },
+  "errorCosBucketMissing": {
+    "message": "The Tencent COS bucket was not found{diagnostic}. Check the Bucket and Region."
+  },
+  "errorCosTimeout": {
+    "message": "The Tencent COS request timed out{diagnostic}. Rootline checked the remote object but could not confirm the upload finished. Check the network and try again."
+  },
+  "errorCosNetwork": {
+    "message": "Could not reach Tencent COS{diagnostic}. Check the network and that CORS allows PUT, GET, HEAD, DELETE, and OPTIONS."
+  },
+  "errorCosUploadFailed": {
+    "message": "The Tencent COS upload failed. Check the settings and try again."
+  },
+  "errorCosCleanupFailed": {
+    "message": "Could not clean up the Tencent COS file."
+  },
+  "errorOssInvalidAccessKey": {
+    "message": "Alibaba Cloud OSS does not recognize this AccessKey ID{diagnostic}. Confirm the key is still enabled."
+  },
+  "errorOssSignatureMismatch": {
+    "message": "The Alibaba Cloud OSS request signature does not match{diagnostic}. Check the Region, Bucket, and computer clock."
+  },
+  "errorOssAccessDenied": {
+    "message": "Alibaba Cloud OSS denied access{diagnostic}. Check that the RAM user has PutObject, GetObject, HeadObject, and DeleteObject on rootline/*, and check CORS."
+  },
+  "errorOssBucketMissing": {
+    "message": "The Alibaba Cloud OSS bucket was not found{diagnostic}. Check the Bucket and Region."
+  },
+  "errorOssNetwork": {
+    "message": "Could not reach Alibaba Cloud OSS. Check the network and that CORS allows PUT, GET, HEAD, DELETE, and OPTIONS."
+  },
+  "errorOssUploadFailed": {
+    "message": "The Alibaba Cloud OSS upload failed. Check the settings and try again."
+  },
+  "errorOssCleanupFailed": {
+    "message": "Could not clean up the Alibaba Cloud OSS file."
+  },
+  "errorScreenshotUnreadable": {
+    "message": "Could not read the page screenshot."
+  },
+  "errorScreenMetadataTimeout": {
+    "message": "Timed out waiting for the screen video metadata."
+  },
+  "errorScreenStreamUnreadable": {
+    "message": "Could not read the screen video stream."
+  },
+  "recordingActivePage": {
+    "message": "Page being recorded"
+  },
+  "errorHistoryDbOpen": {
+    "message": "Could not open the Rootline capture history database."
+  },
+  "errorHistoryOperation": {
+    "message": "The Rootline capture history operation failed."
+  },
+  "errorHistoryTransaction": {
+    "message": "The Rootline capture history transaction failed."
+  },
+  "errorRecordingDbOpen": {
+    "message": "Could not open the temporary recording database."
+  },
+  "errorRecordingDbIo": {
+    "message": "Could not read or write the temporary recording."
+  },
+  "errorRecordingDbTransaction": {
+    "message": "The temporary recording transaction failed."
+  },
+  "errorRecordingInterrupted": {
+    "message": "The recording process was interrupted. Discard this capture and record it again."
+  },
+  "errorRecordingNoFile": {
+    "message": "Recording stopped, but no usable video file was created."
+  },
+  "errorRecordingLimitStopFailed": {
+    "message": "Could not stop recording after it reached the time limit."
+  },
+  "errorRecordingResultUnsaved": {
+    "message": "Recording stopped, but the result was not saved."
+  },
+  "recordingFrameEnded": {
+    "message": "Recording ended"
+  },
+  "settingsBucketTencent": {
+    "message": "Bucket should be name-APPID, for example rootline-1250000000."
+  },
+  "settingsRegionTencent": {
+    "message": "Region format is invalid. Example: ap-guangzhou."
+  },
+  "settingsSecretIdInvalid": {
+    "message": "Enter a valid SecretId."
+  },
+  "settingsSecretKeyInvalid": {
+    "message": "Enter a valid SecretKey."
+  },
+  "settingsBucketAliyun": {
+    "message": "Bucket format is invalid."
+  },
+  "settingsRegionAliyun": {
+    "message": "Region format is invalid. Example: cn-guangzhou."
+  },
+  "settingsAccessKeyIdInvalid": {
+    "message": "Enter a valid AccessKey ID."
+  },
+  "settingsAccessKeySecretInvalid": {
+    "message": "Enter a valid AccessKey Secret."
+  },
+  "settingsPublicUrlInvalid": {
+    "message": "The custom domain must be a full HTTPS address."
   }
 }

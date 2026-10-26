@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "../../components/Brand"
 import { LocaleToggle, useI18n } from "../../components/LocaleToggle"
 import { Notice } from "../../components/Notice"
-import { providerName, t } from "../../src/lib/i18n"
+import { localizeKnownCopy, providerName, t } from "../../src/lib/i18n"
 import type { ActiveState, ExtensionResponse } from "../../src/lib/messaging"
 import type { RootlineSession } from "../../src/lib/types"
 import { formatElapsedTime } from "../../src/lib/time"
@@ -307,9 +307,9 @@ export function PopupApp() {
         <p className="rl-mono rl-muted page-summary__url">{state?.tab?.url ?? ""}</p>
       </section>
 
-      {error ? <Notice title={error} tone="error" /> : null}
-      {success ? <Notice title={success} tone="success" /> : null}
-      {!state?.supported && state?.unsupportedReason ? <Notice title={t("popupUnsupported")} tone="warning">{state.unsupportedReason}</Notice> : null}
+      {error ? <Notice title={localizeKnownCopy(error)} tone="error" /> : null}
+      {success ? <Notice title={localizeKnownCopy(success)} tone="success" /> : null}
+      {!state?.supported && state?.unsupportedReason ? <Notice title={t("popupUnsupported")} tone="warning">{t("popupUnsupportedDetail")}</Notice> : null}
 
       {state?.recording && state.recording.tabId !== state.tab?.id ? (
         <section className="recording-away">

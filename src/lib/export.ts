@@ -1,3 +1,4 @@
+import { t } from "./i18n"
 import { buildReportDirectoryName, buildReportMarkdown, createReport, serializeReportJson } from "./report"
 import type { RootlineReportV1, RootlineSession } from "./types"
 
@@ -13,7 +14,7 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error("无法读取页面截图。"))
+    image.onerror = () => reject(new Error(t("errorScreenshotUnreadable")))
     image.src = dataUrl
   })
 }
@@ -33,7 +34,7 @@ export async function renderAnnotatedCapture(
   canvas.width = image.naturalWidth
   canvas.height = image.naturalHeight
   const context = canvas.getContext("2d")
-  if (!context) throw new Error("浏览器无法创建截图画布。")
+  if (!context) throw new Error(t("errorCaptureCanvasFailed"))
   context.drawImage(image, 0, 0)
   const scaleX = image.naturalWidth / Math.max(session.page.viewport.width, 1)
   const scaleY = image.naturalHeight / Math.max(session.page.viewport.height, 1)

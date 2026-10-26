@@ -1,3 +1,4 @@
+import { t } from "./i18n"
 import { readStoredCaptureRecord, saveStoredCaptureRecord } from "./capture-history-store"
 import { renderAnnotatedCapture } from "./export"
 import type { OffscreenRemoteSaveProgressMessage, RemoteSaveProgress } from "./messaging"
@@ -24,8 +25,8 @@ async function remoteStage<T>(label: string, operation: () => Promise<T>): Promi
   try {
     return await operation()
   } catch (error) {
-    const message = error instanceof Error ? error.message : "未知错误"
-    throw new Error(`${label}失败：${message}`, { cause: error })
+    const message = error instanceof Error ? error.message : t("errorUnknown")
+    throw new Error(t("errorRemoteStageFailed", { stage: label, message }), { cause: error })
   }
 }
 
@@ -72,15 +73,15 @@ export async function writeRemoteSessionArtifacts(
   config: RemoteStorageConfig,
 ): Promise<{ report: RootlineReportV1; location: RemoteArtifactLocation }> {
   notifyRemoteProgress(session.id, { stage: "rendering-capture" })
-  const captureDataUrl = await remoteStage("生成远程标注截图", () => renderAnnotatedCapture(session, {
+  const captureDataUrl = await remoteStage(t("remoteStageAnnotatedShot"), () => renderAnnotatedCapture(session, {
     mimeType: "image/webp",
     quality: 0.82,
   }))
-  if (!captureDataUrl) throw new Error("没有可上传的页面截图。")
+  if (!captureDataUrl) throw new Error(t("errorUploadScreenshotMissing"))
   const recordingResult = session.recording
-    ? await remoteStage("读取录屏临时文件", () => readRecordingResult(session.recording!.resultId))
+    ? await remoteStage(t("remoteStageReadRecording"), () => readRecordingResult(session.recording!.resultId))
     : null
-  if (session.recording && !recordingResult) throw new Error("录屏临时结果已经丢失，无法上传 capture.webm。")
+  if (session.recording && !recordingResult) throw new Error(t("errorRecordingTempLostRemote"))
 
   const location = remoteLocation(session, config)
   const report = createReport({
@@ -104,7 +105,7 @@ export async function writeRemoteSessionArtifacts(
         totalBytes: recordingResult.blob.size,
         percent: 0,
       })
-      await remoteStage("上传录屏", () => putRemoteObject(
+      await remoteStage(t("remoteStageUploadRecording"), () => putRemoteObject(
         config,
         location.recordingKey!,
         recordingResult.blob,
@@ -120,7 +121,7 @@ export async function writeRemoteSessionArtifacts(
       totalBytes: reportBlob.size,
       percent: 0,
     })
-    await remoteStage("上传远程报告", () => putRemoteObject(
+    await remoteStage(t("remoteStageUploadReport"), () => putRemoteObject(
       config,
       location.reportKey,
       reportBlob,
@@ -155,12 +156,12 @@ async function rewriteRemoteRecord(directoryName: string, issue?: RootlineIssue)
     readStoredCaptureRecord(directoryName),
     readCaptureSaveConfig(),
   ])
-  if (!stored?.report.remoteArtifacts || !stored.captureDataUrl) throw new Error("远程采集记录不存在或截图缓存已经被清理。")
+  if (!stored?.report.remoteArtifacts || !stored.captureDataUrl) throw new Error(t("errorRemoteRecordGone"))
   const activeConfig = saveConfig.provider === "aliyun-oss" ? saveConfig.aliyunOss : saveConfig.tencentCos ?? saveConfig.remote
-  if (!activeConfig) throw new Error("远程配置不存在，请重新配置后重试。")
+  if (!activeConfig) throw new Error(t("errorRemoteConfigMissing"))
   const expectedReportUrl = buildRemoteObjectUrl(activeConfig, stored.report.remoteArtifacts.reportKey)
   if (expectedReportUrl !== stored.report.remoteArtifacts.reportUrl) {
-    throw new Error("当前远程配置与这条历史记录不一致。请切换回原来的 Bucket、Region 和访问域名后重试。")
+    throw new Error(t("errorRemoteConfigMismatch"))
   }
 
   const generated = createReport({

@@ -21,7 +21,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { Brand } from "../../components/Brand"
 import { LocaleToggle, useI18n } from "../../components/LocaleToggle"
 import { Notice } from "../../components/Notice"
-import { formatDateTime, formatMonth, t } from "../../src/lib/i18n"
+import { formatDateTime, formatMonth, localizeKnownCopy, t } from "../../src/lib/i18n"
 import { downloadArtifactUrl } from "../../src/lib/download-artifacts"
 import { listCaptureHistory, openCaptureRecording, readCaptureRecord, reexportCaptureRecord } from "../../src/lib/local-artifacts"
 import { assessReportCompleteness, buildRemoteAiContext, buildReportMarkdown } from "../../src/lib/report"
@@ -393,7 +393,7 @@ export function HistoryApp() {
         </div>
       </header>
 
-      {feedback ? <Notice title={feedback.message} tone={feedback.tone} /> : null}
+      {feedback ? <Notice title={localizeKnownCopy(feedback.message)} tone={feedback.tone} /> : null}
 
       <section className="history-section" aria-labelledby="history-title">
         <div className="history-section__heading">
@@ -444,7 +444,7 @@ export function HistoryApp() {
               </div>
             </HistoryMasonryItem>
           ) : (
-            <HistoryMasonryItem invalid key={item.directoryName}><div className="history-record__preview history-record__preview--empty"><ImageOff aria-hidden="true" size={24} /><span>{t("historyRecordUnavailable")}</span></div><div className="history-record__body"><p className="history-record__title">{t("historyRecordUnreadable")}</p><code className="history-record__path">{item.directoryName}</code><p>{item.error}</p></div></HistoryMasonryItem>
+            <HistoryMasonryItem invalid key={item.directoryName}><div className="history-record__preview history-record__preview--empty"><ImageOff aria-hidden="true" size={24} /><span>{t("historyRecordUnavailable")}</span></div><div className="history-record__body"><p className="history-record__title">{t("historyRecordUnreadable")}</p><code className="history-record__path">{item.directoryName}</code><p>{item.error ? localizeKnownCopy(item.error) : null}</p></div></HistoryMasonryItem>
           ))}
         </div>
         {pageCount > 1 ? <nav aria-label={t("historyPagination")} className="history-pagination">
