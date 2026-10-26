@@ -40,6 +40,12 @@ body,
   gap: 16px;
 }
 
+.history-header__tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .history-section {
   display: grid;
   gap: 16px;

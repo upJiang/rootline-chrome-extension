@@ -7,6 +7,8 @@ import ReactDOM, { type Root } from "react-dom/client"
 import "../../styles/globals.css"
 import "../../styles/components.css"
 import "./style.css"
+import { LocaleProvider } from "../../components/LocaleToggle"
+import { t } from "../../src/lib/i18n"
 import { PopupApp } from "./PopupApp"
 
 declare global {
@@ -31,9 +33,9 @@ class PopupErrorBoundary extends Component<{ children: ReactNode }, { failed: bo
       return (
         <main className="popup-shell">
           <section className="rl-card space-y-3" role="alert">
-            <p className="m-0 text-sm font-semibold">Rootline 界面加载失败</p>
-            <p className="rl-muted m-0 text-xs leading-relaxed">开发扩展可能刚完成热更新，请重新加载界面。</p>
-            <button className="rl-button rl-button--primary w-full" onClick={() => window.location.reload()} type="button">重新加载</button>
+            <p className="m-0 text-sm font-semibold">{t("popupLoadFailed")}</p>
+            <p className="rl-muted m-0 text-xs leading-relaxed">{t("popupLoadFailedDetail")}</p>
+            <button className="rl-button rl-button--primary w-full" onClick={() => window.location.reload()} type="button">{t("popupReload")}</button>
           </section>
         </main>
       )
@@ -49,8 +51,10 @@ window.__ROOTLINE_POPUP_REACT_ROOT__ = root
 
 root.render(
   <React.StrictMode>
-    <PopupErrorBoundary>
-      <PopupApp />
-    </PopupErrorBoundary>
+    <LocaleProvider>
+      <PopupErrorBoundary>
+        <PopupApp />
+      </PopupErrorBoundary>
+    </LocaleProvider>
   </React.StrictMode>,
 )

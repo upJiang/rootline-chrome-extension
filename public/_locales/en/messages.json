@@ -1,0 +1,2024 @@
+{
+  "extName": {
+    "message": "Rootline"
+  },
+  "extDescription": {
+    "message": "Capture browser runtime evidence and export a local, Tencent COS, or Alibaba OSS debugging report."
+  },
+  "actionTitle": {
+    "message": "Rootline - Start capture"
+  },
+  "localeToggleLabel": {
+    "message": "Interface language"
+  },
+  "brandTagline": {
+    "message": "Browser runtime capture"
+  },
+  "providerTencent": {
+    "message": "Tencent COS"
+  },
+  "providerAliyun": {
+    "message": "Alibaba Cloud OSS"
+  },
+  "commonOperationFailed": {
+    "message": "Rootline could not complete that action."
+  },
+  "commonCopyFailed": {
+    "message": "Copy failed."
+  },
+  "commonUnknown": {
+    "message": "Unknown"
+  },
+  "commonNotSet": {
+    "message": "Not set"
+  },
+  "commonNone": {
+    "message": "None"
+  },
+  "commonOptional": {
+    "message": "Optional"
+  },
+  "commonClose": {
+    "message": "Close"
+  },
+  "commonUnconfigured": {
+    "message": "Not configured"
+  },
+  "popupDocumentTitle": {
+    "message": "Rootline - Start capture"
+  },
+  "popupLoadFailed": {
+    "message": "Rootline failed to load"
+  },
+  "popupLoadFailedDetail": {
+    "message": "The development extension may have just hot-reloaded. Reload this view."
+  },
+  "popupReload": {
+    "message": "Reload"
+  },
+  "popupOpenHistory": {
+    "message": "Open capture history"
+  },
+  "popupHistoryTitle": {
+    "message": "Capture history"
+  },
+  "popupOpenInstructions": {
+    "message": "Open instructions"
+  },
+  "popupInstructionsTitle": {
+    "message": "Instructions"
+  },
+  "popupCurrentPage": {
+    "message": "Current page"
+  },
+  "popupNoPage": {
+    "message": "No page selected"
+  },
+  "popupReadingPage": {
+    "message": "Reading the current page…"
+  },
+  "popupReadFailed": {
+    "message": "Could not read the current page."
+  },
+  "popupOpenSettingsFailed": {
+    "message": "Could not open remote storage settings."
+  },
+  "popupUnknownTab": {
+    "message": "Could not determine the current tab."
+  },
+  "popupOpenRemoteFailed": {
+    "message": "Could not open the remote report."
+  },
+  "popupLinkCopied": {
+    "message": "Report link copied. Paste it into your workspace or browser."
+  },
+  "popupLinkCopyFailed": {
+    "message": "Could not copy the report link."
+  },
+  "popupUnsupported": {
+    "message": "This page cannot be captured"
+  },
+  "popupRecordingScreen": {
+    "message": "Recording the entire screen"
+  },
+  "popupReturnToSource": {
+    "message": "Return to source page"
+  },
+  "popupStopRecording": {
+    "message": "Stop recording"
+  },
+  "popupStoppingRecording": {
+    "message": "Stopping recording"
+  },
+  "popupCaptureProgress": {
+    "message": "Capture progress"
+  },
+  "popupGeneratingEvidence": {
+    "message": "Creating this evidence"
+  },
+  "popupRecordingStopped": {
+    "message": "Recording stopped"
+  },
+  "popupCaptureStarted": {
+    "message": "Capture started"
+  },
+  "popupGeneratingDetail": {
+    "message": "Hiding the toolbar, organizing evidence, and creating the screenshot"
+  },
+  "popupRecordingDetail": {
+    "message": "Keep selecting and annotating elements while you reproduce the issue"
+  },
+  "popupRecordingStoppedDetail": {
+    "message": "Return to the source page, then create the full evidence"
+  },
+  "popupWaitingDetail": {
+    "message": "Waiting for you to reproduce the issue"
+  },
+  "popupElapsed": {
+    "message": "Running {time}"
+  },
+  "popupMetricTargets": {
+    "message": "Targets"
+  },
+  "popupMetricConsole": {
+    "message": "Console"
+  },
+  "popupMetricErrors": {
+    "message": "Errors"
+  },
+  "popupMetricNetwork": {
+    "message": "Requests"
+  },
+  "popupNoFixedWait": {
+    "message": "Capture does not wait for a fixed time. Finish after you reproduce the issue and annotate it."
+  },
+  "popupBackToPage": {
+    "message": "Return to the page"
+  },
+  "popupFinish": {
+    "message": "Finish and create evidence"
+  },
+  "popupFinishing": {
+    "message": "Creating evidence"
+  },
+  "popupDiscard": {
+    "message": "Discard capture"
+  },
+  "popupEvidenceReady": {
+    "message": "Evidence is ready"
+  },
+  "popupRemoteReady": {
+    "message": "The report was uploaded to your {provider}. Copy the remote link."
+  },
+  "popupLocalReady": {
+    "message": "The report and annotated screenshot were saved on this computer. Open the evidence page for the full path."
+  },
+  "popupViewEvidence": {
+    "message": "View full evidence"
+  },
+  "popupReannotate": {
+    "message": "Annotate again"
+  },
+  "popupConnecting": {
+    "message": "Connecting to the page"
+  },
+  "popupOpenRemote": {
+    "message": "Open remote report"
+  },
+  "popupCopyLink": {
+    "message": "Copy report link"
+  },
+  "popupRequestingScreen": {
+    "message": "Requesting screen permission"
+  },
+  "popupRecordPage": {
+    "message": "Record page"
+  },
+  "popupConnectingPage": {
+    "message": "Connecting to this page"
+  },
+  "popupStartAnnotate": {
+    "message": "Start annotating"
+  },
+  "popupWorkflow": {
+    "message": "Capture flow"
+  },
+  "popupReproduce": {
+    "message": "Reproduce"
+  },
+  "popupSelectElements": {
+    "message": "Select elements"
+  },
+  "popupExportContext": {
+    "message": "Export context"
+  },
+  "popupSaveMode": {
+    "message": "Evidence storage"
+  },
+  "popupLocal": {
+    "message": "Local"
+  },
+  "popupRemote": {
+    "message": "Remote"
+  },
+  "popupConfigureRemote": {
+    "message": "Configure remote storage"
+  },
+  "popupRemoteSettings": {
+    "message": "Remote storage settings"
+  },
+  "popupRemoteFooter": {
+    "message": "{provider} · {bucket}"
+  },
+  "popupLocalFooter": {
+    "message": "Files are saved to the browser downloads folder / Rootline"
+  },
+  "overlayParent": {
+    "message": "Parent"
+  },
+  "overlaySelectParent": {
+    "message": "Select the parent component: {label}"
+  },
+  "overlayNoParent": {
+    "message": "No parent component is available"
+  },
+  "overlayAnnotate": {
+    "message": "Mark"
+  },
+  "overlayReselect": {
+    "message": "Reselect"
+  },
+  "overlayPanelTitle": {
+    "message": "Annotation"
+  },
+  "overlayScreenshot": {
+    "message": "Screenshot"
+  },
+  "overlayRecording": {
+    "message": "Recording"
+  },
+  "overlayRecordingScreen": {
+    "message": "Recording the entire screen"
+  },
+  "overlayRecordingFailed": {
+    "message": "Recording did not finish"
+  },
+  "overlayRequestingScreen": {
+    "message": "Requesting screen permission"
+  },
+  "overlayRecordingStopped": {
+    "message": "Recording stopped. You can keep annotating."
+  },
+  "overlayStop": {
+    "message": "Stop"
+  },
+  "overlayStopping": {
+    "message": "Stopping"
+  },
+  "overlaySelecting": {
+    "message": "Selecting"
+  },
+  "overlayStartAnnotate": {
+    "message": "Start annotating"
+  },
+  "overlayClickProblem": {
+    "message": "Click the problem on the page"
+  },
+  "overlayChooseProblem": {
+    "message": "Choose the problem on the page"
+  },
+  "overlayEndAnnotate": {
+    "message": "Stop annotating"
+  },
+  "overlayHintSpacing": {
+    "message": "Spacing mode: click gaps or text lines. Click a mark to fill in expected and actual results."
+  },
+  "overlayHintElement": {
+    "message": "Control mode: click a control or element. Click a mark to fill in expected and actual results."
+  },
+  "overlayHintIdle": {
+    "message": "Click Start annotating, then choose the spot you need to explain on this tab."
+  },
+  "overlayShortcut": {
+    "message": "Shortcut"
+  },
+  "overlayExitAnnotate": {
+    "message": "Exit annotation"
+  },
+  "overlayStopAndFinish": {
+    "message": "Stop recording and create evidence"
+  },
+  "overlayFinish": {
+    "message": "Finish and create evidence"
+  },
+  "overlayModeElement": {
+    "message": "Controls"
+  },
+  "overlayModeElementDetail": {
+    "message": "Buttons, forms, and elements"
+  },
+  "overlayModeSpacing": {
+    "message": "Spacing"
+  },
+  "overlayModeSpacingDetail": {
+    "message": "Gaps and text lines"
+  },
+  "overlayMarked": {
+    "message": "Marked"
+  },
+  "overlayUndo": {
+    "message": "Undo"
+  },
+  "overlayClear": {
+    "message": "Clear"
+  },
+  "overlayCancel": {
+    "message": "Cancel"
+  },
+  "overlayExpected": {
+    "message": "Expected result"
+  },
+  "overlayExpectedPlaceholder": {
+    "message": "How should this spot behave?"
+  },
+  "overlayActual": {
+    "message": "Actual result"
+  },
+  "overlayActualPlaceholder": {
+    "message": "What actually happened on the page?"
+  },
+  "overlayCancelAnnotation": {
+    "message": "Cancel mark"
+  },
+  "overlayDeleteAnnotation": {
+    "message": "Delete mark"
+  },
+  "overlayConfirm": {
+    "message": "Save"
+  },
+  "overlaySaving": {
+    "message": "Saving"
+  },
+  "overlayCompleteEyebrow": {
+    "message": "Capture complete"
+  },
+  "overlayCompleteTitle": {
+    "message": "Evidence is ready"
+  },
+  "overlayCloseComplete": {
+    "message": "Close completion notice"
+  },
+  "overlayLocationRemote": {
+    "message": "Remote report link"
+  },
+  "overlayLocationLocal": {
+    "message": "Saved file location"
+  },
+  "overlayDownloadsFallback": {
+    "message": "Chrome downloads/Rootline"
+  },
+  "overlayViewEvidence": {
+    "message": "View full evidence"
+  },
+  "overlayReannotate": {
+    "message": "Annotate again"
+  },
+  "overlayCopyContext": {
+    "message": "Copy AI context"
+  },
+  "overlayExportAgain": {
+    "message": "Export report again"
+  },
+  "overlayOpenRemote": {
+    "message": "Open remote report"
+  },
+  "overlayCopyLink": {
+    "message": "Copy report link"
+  },
+  "overlayPendingToolbar": {
+    "message": "Confirm this element"
+  },
+  "overlayPanelAria": {
+    "message": "Rootline page capture tools"
+  },
+  "overlayShortcutAria": {
+    "message": "Press A to start annotating"
+  },
+  "overlayModesAria": {
+    "message": "Annotation mode"
+  },
+  "overlayEditorAria": {
+    "message": "Element annotation"
+  },
+  "overlayCompleteAria": {
+    "message": "Capture complete"
+  },
+  "overlayUntitledText": {
+    "message": "Untitled text"
+  },
+  "overlayTextLineLabel": {
+    "message": "Text line · {text}"
+  },
+  "overlaySpacingLabel": {
+    "message": "Spacing · {axis} {distance}px"
+  },
+  "overlayAxisVertical": {
+    "message": "vertical"
+  },
+  "overlayAxisHorizontal": {
+    "message": "horizontal"
+  },
+  "overlayTargetLocked": {
+    "message": "Locked {label}."
+  },
+  "overlayPendingCleared": {
+    "message": "Current target cleared."
+  },
+  "overlayRecordingStoppedFeedback": {
+    "message": "Recording stopped. Keep annotating or create evidence."
+  },
+  "overlayStopRecordingFailed": {
+    "message": "Could not stop recording."
+  },
+  "overlayAnnotationUpdated": {
+    "message": "Mark {count} updated. You can keep selecting."
+  },
+  "overlayAnnotationSaveFailed": {
+    "message": "Could not save the annotation."
+  },
+  "overlayAnnotationCancelled": {
+    "message": "This annotation was cancelled."
+  },
+  "overlayAnnotationDeleted": {
+    "message": "Annotation deleted."
+  },
+  "overlayUndone": {
+    "message": "Last annotation undone."
+  },
+  "overlayCleared": {
+    "message": "All annotations cleared."
+  },
+  "overlayAnnotationAdded": {
+    "message": "Added mark {count}. You can fill in the notes later."
+  },
+  "overlayLinkCopied": {
+    "message": "Report link copied. Paste it into your workspace or browser."
+  },
+  "overlayLinkCopyFailed": {
+    "message": "Could not copy the report link."
+  },
+  "overlayRemoteOpenFailed": {
+    "message": "Could not open the remote report."
+  },
+  "overlayContextCopied": {
+    "message": "AI context copied. Paste it into Codex, Claude, or Cursor."
+  },
+  "overlayExported": {
+    "message": "Report exported again to {directory}."
+  },
+  "overlayExportFailed": {
+    "message": "Could not export the report again."
+  },
+  "overlayReviewFailed": {
+    "message": "Could not open the full evidence."
+  },
+  "overlayReannotateFailed": {
+    "message": "Could not start annotating again."
+  },
+  "overlayFinishingCapture": {
+    "message": "Organizing evidence and creating the screenshot"
+  },
+  "overlayFinishFailed": {
+    "message": "Could not finish the capture."
+  },
+  "overlayUploadingRemote": {
+    "message": "Screenshot ready. Uploading to {provider}…"
+  },
+  "overlaySavingLocal": {
+    "message": "Screenshot ready. Saving to the browser downloads folder…"
+  },
+  "overlayWaitingRemote": {
+    "message": "Screenshot finished. Waiting for {provider}."
+  },
+  "overlayWritingLocal": {
+    "message": "Screenshot finished. Writing local files."
+  },
+  "overlayUploadingEvidence": {
+    "message": "Uploading evidence"
+  },
+  "overlaySavingEvidence": {
+    "message": "Saving evidence"
+  },
+  "overlayRenderingCapture": {
+    "message": "Creating the annotated screenshot…"
+  },
+  "overlayUploadingRecording": {
+    "message": "Uploading the recording{details}"
+  },
+  "overlayUploadingReport": {
+    "message": "Uploading the remote report{details}"
+  },
+  "overlaySavingHistory": {
+    "message": "Remote files uploaded. Saving capture history…"
+  },
+  "overlayFinishing": {
+    "message": "Finishing capture"
+  },
+  "overlayProgressDetails": {
+    "message": " · {details}"
+  },
+  "overlaySummary": {
+    "message": "{targets} elements · {console} console · {network} network"
+  },
+  "overlayUploaded": {
+    "message": "Evidence uploaded to your {provider}."
+  },
+  "overlaySavedTo": {
+    "message": "Evidence saved to {destination}."
+  },
+  "overlayEditMarker": {
+    "message": "Edit mark {index}"
+  },
+  "diagnosisDocumentTitle": {
+    "message": "Rootline · Full capture evidence"
+  },
+  "diagnosisMissingRecord": {
+    "message": "The capture link is missing its record parameter."
+  },
+  "diagnosisReadFailed": {
+    "message": "Could not read the capture record."
+  },
+  "diagnosisSaveIssueFailed": {
+    "message": "Could not save the issue description."
+  },
+  "diagnosisSessionNotLoaded": {
+    "message": "The capture record is not loaded yet."
+  },
+  "diagnosisContextCopiedRemote": {
+    "message": "AI context copied. It reuses the existing COS link."
+  },
+  "diagnosisContextCopiedLocal": {
+    "message": "AI context copied, including local report and screenshot paths."
+  },
+  "diagnosisLinkCopied": {
+    "message": "Report link copied. Open it or paste it to an AI."
+  },
+  "diagnosisLinkCopyFailed": {
+    "message": "Could not copy the report link."
+  },
+  "diagnosisRemoteOpenFailed": {
+    "message": "Could not open the remote report."
+  },
+  "diagnosisRemoteExported": {
+    "message": "Remote report.html was exported again."
+  },
+  "diagnosisExportedTo": {
+    "message": "Report exported again to {path}."
+  },
+  "diagnosisLocalSave": {
+    "message": "local save location"
+  },
+  "diagnosisExportedDir": {
+    "message": "Report exported to {directory}."
+  },
+  "diagnosisExportFailed": {
+    "message": "Could not export again."
+  },
+  "diagnosisLoading": {
+    "message": "Reading the capture…"
+  },
+  "diagnosisOpenFailed": {
+    "message": "Could not open the capture report"
+  },
+  "diagnosisRecordUnavailable": {
+    "message": "The record may have been moved, damaged, or is unavailable."
+  },
+  "diagnosisOpenRemote": {
+    "message": "Open remote report"
+  },
+  "diagnosisCopyLink": {
+    "message": "Copy report link"
+  },
+  "diagnosisCopyContext": {
+    "message": "Copy AI context"
+  },
+  "diagnosisExportAgain": {
+    "message": "Export report again"
+  },
+  "diagnosisMediaEvidence": {
+    "message": "Page media evidence"
+  },
+  "diagnosisRemoteMedia": {
+    "message": "Remote media"
+  },
+  "diagnosisLocalMedia": {
+    "message": "Local media"
+  },
+  "diagnosisRuntimeTitle": {
+    "message": "Runtime"
+  },
+  "diagnosisMediaType": {
+    "message": "Media type"
+  },
+  "diagnosisAnnotatedShot": {
+    "message": "Annotated screenshot"
+  },
+  "diagnosisPageRecording": {
+    "message": "Page recording"
+  },
+  "diagnosisRecordingOnProvider": {
+    "message": "Recording saved to {provider}"
+  },
+  "diagnosisRemoteRecordingUnavailable": {
+    "message": "The remote recording link is unavailable"
+  },
+  "diagnosisRecordingInDownloads": {
+    "message": "Recording saved in the local downloads folder"
+  },
+  "diagnosisRecordingUnknown": {
+    "message": "Chrome download history was cleared, so the recording location cannot be confirmed"
+  },
+  "diagnosisRecordingMissing": {
+    "message": "The report includes recording info, but capture.webm is missing"
+  },
+  "diagnosisOpenRemoteRecording": {
+    "message": "Open remote recording"
+  },
+  "diagnosisOpenLocalRecording": {
+    "message": "Open local recording"
+  },
+  "diagnosisShotAlt": {
+    "message": "Page screenshot with {count} marked elements"
+  },
+  "diagnosisNoScreenshot": {
+    "message": "This capture has no screenshot"
+  },
+  "diagnosisKeyframeCount": {
+    "message": "{count} keyframes"
+  },
+  "diagnosisKeyframeTimeline": {
+    "message": "Recording keyframe timeline"
+  },
+  "diagnosisSeek": {
+    "message": "Seek to {time}{label}"
+  },
+  "diagnosisSeekLabel": {
+    "message": ", {label}"
+  },
+  "diagnosisTargetCount": {
+    "message": "{count} target elements"
+  },
+  "diagnosisConsoleCount": {
+    "message": "{count} console records"
+  },
+  "diagnosisNetworkCount": {
+    "message": "{count} network records"
+  },
+  "diagnosisEvidence": {
+    "message": "Capture evidence"
+  },
+  "diagnosisTabs": {
+    "message": "Evidence categories"
+  },
+  "diagnosisTabIssue": {
+    "message": "Issue"
+  },
+  "diagnosisTabElements": {
+    "message": "Elements"
+  },
+  "diagnosisTabConsole": {
+    "message": "Console"
+  },
+  "diagnosisTabNetwork": {
+    "message": "Network"
+  },
+  "diagnosisTabEnvironment": {
+    "message": "Environment"
+  },
+  "diagnosisTabAi": {
+    "message": "AI context"
+  },
+  "diagnosisCompleteness": {
+    "message": "Capture completeness {score}%, {level}"
+  },
+  "diagnosisCompletenessShort": {
+    "message": "Completeness"
+  },
+  "diagnosisLevelComplete": {
+    "message": "Complete"
+  },
+  "diagnosisLevelUsable": {
+    "message": "Usable"
+  },
+  "diagnosisLevelIncomplete": {
+    "message": "Needs detail"
+  },
+  "diagnosisMissingSymptom": {
+    "message": "Symptom"
+  },
+  "diagnosisMissingExpected": {
+    "message": "Expected result"
+  },
+  "diagnosisMissingTargets": {
+    "message": "Target elements"
+  },
+  "diagnosisMissingScreenshot": {
+    "message": "Page screenshot"
+  },
+  "diagnosisMissingRecording": {
+    "message": "Recording file"
+  },
+  "diagnosisMissingEvents": {
+    "message": "Console or network events"
+  },
+  "diagnosisIssueEyebrow": {
+    "message": "Capture goal"
+  },
+  "diagnosisIssueTitle": {
+    "message": "Describe a reproducible issue"
+  },
+  "diagnosisIssueIntro": {
+    "message": "This text is placed at the front of the AI context. Page evidence does not replace a clear symptom and expected result."
+  },
+  "diagnosisSymptom": {
+    "message": "Symptom"
+  },
+  "diagnosisSymptomPlaceholder": {
+    "message": "Example: clicking Save gives no feedback and the console shows a TypeError."
+  },
+  "diagnosisSyncedRemote": {
+    "message": "Synced to COS"
+  },
+  "diagnosisSavedLocal": {
+    "message": "Saved locally"
+  },
+  "diagnosisSyncingRemote": {
+    "message": "Syncing to COS…"
+  },
+  "diagnosisSaving": {
+    "message": "Saving…"
+  },
+  "diagnosisExpected": {
+    "message": "Expected result"
+  },
+  "diagnosisExpectedPlaceholder": {
+    "message": "Example: after a successful save, update the list and show a success message."
+  },
+  "diagnosisExpectedHint": {
+    "message": "Describe the correct behavior. Do not assume a root cause."
+  },
+  "diagnosisNotes": {
+    "message": "Notes"
+  },
+  "diagnosisNotesPlaceholder": {
+    "message": "How often it happens, account conditions, recent changes, or other necessary context."
+  },
+  "diagnosisMissingMore": {
+    "message": "Still useful to add: {items}"
+  },
+  "diagnosisMissingImpact": {
+    "message": "Missing items do not block export, but they make it harder for an external AI to locate the issue."
+  },
+  "diagnosisEvidenceReady": {
+    "message": "Evidence is ready"
+  },
+  "diagnosisEvidenceReadyDetail": {
+    "message": "Copy the AI context or export the report again."
+  },
+  "diagnosisNoTargets": {
+    "message": "No target elements selected"
+  },
+  "diagnosisNoTargetsDetail": {
+    "message": "The report can still be exported, but the AI can only use the page, console, and network evidence."
+  },
+  "diagnosisDomEyebrow": {
+    "message": "DOM evidence"
+  },
+  "diagnosisDomTitle": {
+    "message": "{count} target elements"
+  },
+  "diagnosisDomIntro": {
+    "message": "Element numbers match the annotated screenshot. Full prop values are not captured."
+  },
+  "diagnosisActualResult": {
+    "message": "Actual behavior"
+  },
+  "diagnosisAncestorPath": {
+    "message": "Ancestor path"
+  },
+  "diagnosisPosition": {
+    "message": "Position"
+  },
+  "diagnosisDomSummary": {
+    "message": "DOM summary"
+  },
+  "diagnosisComputedStyle": {
+    "message": "Key computed styles"
+  },
+  "diagnosisBeforeStyle": {
+    "message": "::before styles"
+  },
+  "diagnosisAfterStyle": {
+    "message": "::after styles"
+  },
+  "diagnosisReactHint": {
+    "message": "React runtime hints"
+  },
+  "diagnosisComponentChain": {
+    "message": "Component chain"
+  },
+  "diagnosisComponentUnknown": {
+    "message": "Component name not recognized"
+  },
+  "diagnosisPropsNone": {
+    "message": "None"
+  },
+  "diagnosisNoReact": {
+    "message": "No React metadata is available."
+  },
+  "diagnosisCssRules": {
+    "message": "Matched CSS rules"
+  },
+  "diagnosisNoCss": {
+    "message": "No accessible same-origin matched rules were read."
+  },
+  "diagnosisConsoleTitle": {
+    "message": "{count} captured records"
+  },
+  "diagnosisConsoleIntro": {
+    "message": "Only logs, page errors, and unhandled Promise rejections from after capture started."
+  },
+  "diagnosisLogLevel": {
+    "message": "Log level"
+  },
+  "diagnosisAll": {
+    "message": "All"
+  },
+  "diagnosisLevelError": {
+    "message": "Error"
+  },
+  "diagnosisLevelWarn": {
+    "message": "Warning"
+  },
+  "diagnosisLevelInfo": {
+    "message": "Info"
+  },
+  "diagnosisNoConsole": {
+    "message": "No matching console records"
+  },
+  "diagnosisAdjustFilters": {
+    "message": "Adjust the filters and try again."
+  },
+  "diagnosisMessage": {
+    "message": "Message"
+  },
+  "diagnosisStack": {
+    "message": "Stack"
+  },
+  "diagnosisTruncated4k": {
+    "message": "This record was truncated at the 4 KB limit."
+  },
+  "diagnosisNetworkTitle": {
+    "message": "{count} requests and resources"
+  },
+  "diagnosisNetworkIntro": {
+    "message": "fetch and XHR include redacted previews. Other resources come from Resource Timing."
+  },
+  "diagnosisRequestType": {
+    "message": "Request type"
+  },
+  "diagnosisResource": {
+    "message": "Resource"
+  },
+  "diagnosisNoNetwork": {
+    "message": "No matching network records"
+  },
+  "diagnosisRequestHeaders": {
+    "message": "Request headers"
+  },
+  "diagnosisRequestBody": {
+    "message": "Request body{suffix}"
+  },
+  "diagnosisTruncatedSuffix": {
+    "message": " · truncated"
+  },
+  "diagnosisResponseHeaders": {
+    "message": "Response headers"
+  },
+  "diagnosisResponseBody": {
+    "message": "Response body{suffix}"
+  },
+  "diagnosisNoBody": {
+    "message": "This Resource Timing record does not include request or response bodies."
+  },
+  "diagnosisEnvEyebrow": {
+    "message": "Environment"
+  },
+  "diagnosisEnvTitle": {
+    "message": "Page and capture boundaries"
+  },
+  "diagnosisEnvIntro": {
+    "message": "Rootline does not request Cookie, webRequest, debugger, or site-wide access."
+  },
+  "diagnosisPage": {
+    "message": "Page"
+  },
+  "diagnosisUrl": {
+    "message": "URL"
+  },
+  "diagnosisPageTitle": {
+    "message": "Title"
+  },
+  "diagnosisViewport": {
+    "message": "Viewport"
+  },
+  "diagnosisLanguage": {
+    "message": "Language"
+  },
+  "diagnosisStarted": {
+    "message": "Capture started"
+  },
+  "diagnosisCapturedAt": {
+    "message": "Screenshot time"
+  },
+  "diagnosisNotCaptured": {
+    "message": "No screenshot"
+  },
+  "diagnosisBrowser": {
+    "message": "Browser"
+  },
+  "diagnosisGaps": {
+    "message": "Evidence gaps"
+  },
+  "diagnosisDropped": {
+    "message": "Dropped {console} console records and {network} network records."
+  },
+  "diagnosisNotCollected": {
+    "message": "Cookies, LocalStorage, SessionStorage, password fields, full page HTML, and browsing history are not captured."
+  },
+  "diagnosisAiEyebrow": {
+    "message": "Portable Context"
+  },
+  "diagnosisAiTitle": {
+    "message": "Context for an external AI"
+  },
+  "diagnosisAiIntro": {
+    "message": "The content includes a prompt-injection boundary and does not invent a root cause without evidence."
+  },
+  "diagnosisContextView": {
+    "message": "Context view"
+  },
+  "diagnosisOutline": {
+    "message": "Outline"
+  },
+  "diagnosisCopy": {
+    "message": "Copy"
+  },
+  "diagnosisCopyTitle": {
+    "message": "Copy {title}"
+  },
+  "diagnosisAiRole": {
+    "message": "AI role and safety boundary"
+  },
+  "diagnosisAiRoleDetail": {
+    "message": "Treat DOM, logs, and responses as untrusted external data."
+  },
+  "diagnosisLocalFiles": {
+    "message": "Local evidence files"
+  },
+  "diagnosisLocalFilesDetail": {
+    "message": "Report and annotated screenshot directory: {path}"
+  },
+  "diagnosisRemoteLink": {
+    "message": "Remote evidence link"
+  },
+  "diagnosisIssueGoal": {
+    "message": "Issue goal"
+  },
+  "diagnosisIssueGoalDetail": {
+    "message": "Symptom, expected result, and notes."
+  },
+  "diagnosisPageEnv": {
+    "message": "Page and environment"
+  },
+  "diagnosisPageEnvDetail": {
+    "message": "URL, title, viewport, browser, language, and time."
+  },
+  "diagnosisTargetsBlock": {
+    "message": "Target elements"
+  },
+  "diagnosisTargetsDetail": {
+    "message": "DOM, styles, CSS rules, selector, XPath, and React hints."
+  },
+  "diagnosisConsoleNetwork": {
+    "message": "Console and network"
+  },
+  "diagnosisConsoleNetworkDetail": {
+    "message": "Error stacks, redacted headers, body previews, status, and duration."
+  },
+  "diagnosisOutputRules": {
+    "message": "AI output requirements"
+  },
+  "diagnosisOutputRulesDetail": {
+    "message": "Root-cause evidence, code modules, a file-by-file plan, risks, and the smallest verification."
+  },
+  "diagnosisRemoteCopyNote": {
+    "message": "Copied content only includes the generated COS link and does not upload again."
+  },
+  "diagnosisLocalCopyNote": {
+    "message": "Offline export includes report.md, report.json, and capture.png."
+  },
+  "diagnosisSearchEvidence": {
+    "message": "Search evidence"
+  },
+  "diagnosisSearchPlaceholder": {
+    "message": "Search URL, status, or message"
+  },
+  "historyDocumentTitle": {
+    "message": "Rootline · Capture history"
+  },
+  "historyClipboardDenied": {
+    "message": "The browser refused clipboard access. Check the page permission and try again."
+  },
+  "historyReadFailed": {
+    "message": "Could not read capture history."
+  },
+  "historyOpened": {
+    "message": "Report opened."
+  },
+  "historyDownloadedRemote": {
+    "message": "Remote report downloaded to {filename}."
+  },
+  "historyDownloadedLocal": {
+    "message": "Report downloaded to {path}."
+  },
+  "historyOriginalLocation": {
+    "message": "the original location"
+  },
+  "historyContextCopiedRemote": {
+    "message": "AI context copied. It reuses the existing COS link."
+  },
+  "historyContextCopiedLocal": {
+    "message": "AI context copied, including absolute paths to the local evidence."
+  },
+  "historyRemoteRecordingExpired": {
+    "message": "The remote recording link has expired."
+  },
+  "historyLocalRecordingMissing": {
+    "message": "The local recording file is missing."
+  },
+  "historyRecordingUnknown": {
+    "message": "Chrome download history was cleared, so the recording location cannot be confirmed."
+  },
+  "historyRemoteRecordingOpened": {
+    "message": "Remote recording opened."
+  },
+  "historyLocalRecordingOpened": {
+    "message": "Local recording opened."
+  },
+  "historyRefresh": {
+    "message": "Refresh history"
+  },
+  "historyKicker": {
+    "message": "Evidence archive"
+  },
+  "historyTitle": {
+    "message": "Capture history"
+  },
+  "historyCount": {
+    "message": " / {count}"
+  },
+  "historyFilters": {
+    "message": "History filters"
+  },
+  "historySearch": {
+    "message": "Search"
+  },
+  "historySearchPlaceholder": {
+    "message": "Page, domain, or directory"
+  },
+  "historyClearSearch": {
+    "message": "Clear search"
+  },
+  "historyDateRange": {
+    "message": "Time range"
+  },
+  "historyDateBetween": {
+    "message": "{from} to {to}"
+  },
+  "historyDateFrom": {
+    "message": "From {from}"
+  },
+  "historyDateUntil": {
+    "message": "Until {to}"
+  },
+  "historyChooseDate": {
+    "message": "Choose dates"
+  },
+  "historyClearDate": {
+    "message": "Clear date filter"
+  },
+  "historyChooseRange": {
+    "message": "Choose a date range"
+  },
+  "historyDateHeading": {
+    "message": "Date range"
+  },
+  "historyCloseDate": {
+    "message": "Close date filter"
+  },
+  "historyDatePresets": {
+    "message": "Date presets"
+  },
+  "historyAll": {
+    "message": "All"
+  },
+  "historyToday": {
+    "message": "Today"
+  },
+  "history7d": {
+    "message": "Last 7 days"
+  },
+  "history30d": {
+    "message": "Last 30 days"
+  },
+  "historyStartDate": {
+    "message": "Start date"
+  },
+  "historyEndDate": {
+    "message": "End date"
+  },
+  "historyTo": {
+    "message": "to"
+  },
+  "historyPrevYear": {
+    "message": "Previous year"
+  },
+  "historyPrevMonth": {
+    "message": "Previous month"
+  },
+  "historyNextMonth": {
+    "message": "Next month"
+  },
+  "historyNextYear": {
+    "message": "Next year"
+  },
+  "historyWeekdays": {
+    "message": "Mo,Tu,We,Th,Fr,Sa,Su"
+  },
+  "historyInvalidDate": {
+    "message": "Enter a valid date."
+  },
+  "historyDateOrder": {
+    "message": "The start date cannot be after the end date."
+  },
+  "historyClearFilters": {
+    "message": "Clear filters"
+  },
+  "historyShowingAll": {
+    "message": "Showing all"
+  },
+  "historyEmpty": {
+    "message": "No captures yet. After you finish one, Rootline keeps a local index here."
+  },
+  "historyNoMatch": {
+    "message": "No matching captures. Adjust the search or time range and try again."
+  },
+  "historyShotMissing": {
+    "message": "Screenshot file missing"
+  },
+  "historyNoShot": {
+    "message": "No screenshot available"
+  },
+  "historyShotAlt": {
+    "message": "Page screenshot: {title}"
+  },
+  "historyCaptureRecord": {
+    "message": "capture record"
+  },
+  "historyRecordingDuration": {
+    "message": "Recording {duration}"
+  },
+  "historyRecordingFileMissing": {
+    "message": "Recording file missing"
+  },
+  "historyRecordingUnconfirmed": {
+    "message": "Recording location cannot be confirmed"
+  },
+  "historyAnnotatedShot": {
+    "message": "Annotated screenshot"
+  },
+  "historyRemoteReachable": {
+    "message": "Remote link reachable"
+  },
+  "historyRemoteUnreachable": {
+    "message": "Remote link unreachable"
+  },
+  "historyRemotePending": {
+    "message": "Remote link not confirmed"
+  },
+  "historyCompleteness": {
+    "message": "{score}% complete"
+  },
+  "historyElementCount": {
+    "message": "{count} elements"
+  },
+  "historyErrorCount": {
+    "message": "{count} errors"
+  },
+  "historyRequestCount": {
+    "message": "{count} requests"
+  },
+  "historyViewReport": {
+    "message": "View report"
+  },
+  "historyOpening": {
+    "message": "Opening"
+  },
+  "historyDownloadReport": {
+    "message": "Download report"
+  },
+  "historyDownloading": {
+    "message": "Downloading"
+  },
+  "historyViewRecording": {
+    "message": "View recording"
+  },
+  "historyCopyContext": {
+    "message": "Copy AI context"
+  },
+  "historyCopying": {
+    "message": "Copying"
+  },
+  "historyRecordUnavailable": {
+    "message": "Record unavailable"
+  },
+  "historyRecordUnreadable": {
+    "message": "Could not read the capture record"
+  },
+  "historyPagination": {
+    "message": "Capture history pages"
+  },
+  "historyFirstPage": {
+    "message": "First page"
+  },
+  "historyPrevPage": {
+    "message": "Previous page"
+  },
+  "historyPageNumber": {
+    "message": "Page {page}"
+  },
+  "historyNextPage": {
+    "message": "Next page"
+  },
+  "historyLastPage": {
+    "message": "Last page"
+  },
+  "historyPageStatus": {
+    "message": "Page {current} / {total}"
+  },
+  "instructionsDocumentTitle": {
+    "message": "Rootline · Instructions"
+  },
+  "instructionsKicker": {
+    "message": "Browser runtime capture"
+  },
+  "instructionsTitle": {
+    "message": "From a page issue to an actionable change plan"
+  },
+  "instructionsLead": {
+    "message": "Capture runtime evidence, check the target, then hand the full context to Codex, Claude, or Cursor in the current project."
+  },
+  "instructionsCalloutTitle": {
+    "message": "Start capture before you reproduce the issue"
+  },
+  "instructionsCalloutDetail": {
+    "message": "Console and network evidence only cover the window after you start capture."
+  },
+  "instructionsWorkflowEyebrow": {
+    "message": "Workflow"
+  },
+  "instructionsWorkflowTitle": {
+    "message": "Full capture flow"
+  },
+  "instructionsStep1Title": {
+    "message": "Start capture"
+  },
+  "instructionsStep1Detail": {
+    "message": "Click Start annotating or Record page."
+  },
+  "instructionsStep2Title": {
+    "message": "Reproduce the issue"
+  },
+  "instructionsStep2Detail": {
+    "message": "Trigger the issue again on the page so the related logs and requests happen inside the capture window."
+  },
+  "instructionsStep3Title": {
+    "message": "Select and annotate"
+  },
+  "instructionsStep3Detail": {
+    "message": "Use the toolbar at the lower right to click key elements and fill in actual behavior and the expected result. Press Escape to exit."
+  },
+  "instructionsStep4Title": {
+    "message": "Keep capturing"
+  },
+  "instructionsStep4Detail": {
+    "message": "After saving, keep selecting. You can also click a number to edit it, or use undo and clear."
+  },
+  "instructionsStep5Title": {
+    "message": "Save location"
+  },
+  "instructionsStep5Detail": {
+    "message": "Files go to the Rootline folder in Chrome downloads by default. You can switch the popup to Remote and configure Tencent COS or Alibaba Cloud OSS in a separate window."
+  },
+  "instructionsStep6Title": {
+    "message": "Hand off to AI"
+  },
+  "instructionsStep6Detail": {
+    "message": "Local mode copies the local path. Remote mode copies the object-storage report link that was already created, without uploading again."
+  },
+  "instructionsEvidenceEyebrow": {
+    "message": "Evidence"
+  },
+  "instructionsEvidenceTitle": {
+    "message": "What the report includes"
+  },
+  "instructionsEvidencePage": {
+    "message": "Page and environment"
+  },
+  "instructionsEvidencePageDetail": {
+    "message": "URL, title, viewport, DPR, browser, and language."
+  },
+  "instructionsEvidenceTargets": {
+    "message": "Target elements"
+  },
+  "instructionsEvidenceTargetsDetail": {
+    "message": "DOM summary, key styles, CSS rules, selector, and React hints."
+  },
+  "instructionsEvidenceConsole": {
+    "message": "Console"
+  },
+  "instructionsEvidenceConsoleDetail": {
+    "message": "Logs, page errors, and unhandled Promise rejections after capture starts."
+  },
+  "instructionsEvidenceNetwork": {
+    "message": "Network"
+  },
+  "instructionsEvidenceNetworkDetail": {
+    "message": "fetch, XHR, resource status, duration, and redacted body previews."
+  },
+  "instructionsEvidenceVideo": {
+    "message": "Optional full-screen recording"
+  },
+  "instructionsEvidenceVideoDetail": {
+    "message": "1280 × 720 silent WebM, plus up to 24 keyframe timestamps."
+  },
+  "instructionsPrivacyEyebrow": {
+    "message": "Privacy"
+  },
+  "instructionsPrivacyTitle": {
+    "message": "Local / remote storage and capture boundaries"
+  },
+  "instructionsRedaction": {
+    "message": "Redacted before storage"
+  },
+  "instructionsRedactionDetail": {
+    "message": "Sensitive headers, query values, JSON, and form fields are hidden, and content is truncated at fixed limits."
+  },
+  "instructionsSaveModes": {
+    "message": "Local or remote storage"
+  },
+  "instructionsSaveModesDetail": {
+    "message": "Local mode writes to Downloads/Rootline. Remote mode writes directly to your own Tencent COS or Alibaba Cloud OSS. Prefer public-read, private-write, and do not use public read-write. Turn off forced download, or the browser will download report.html. CORS should expose Content-Disposition, Content-Type, Content-Length, and ETag."
+  },
+  "instructionsNotCollected": {
+    "message": "Explicitly not captured"
+  },
+  "instructionsNotCollectedDetail": {
+    "message": "Cookies, LocalStorage, SessionStorage, passwords, full page HTML, and browsing history do not enter the report."
+  },
+  "instructionsOutputEyebrow": {
+    "message": "Output"
+  },
+  "instructionsOutputTitle": {
+    "message": "Local or remote output"
+  },
+  "instructionsOutputDetail": {
+    "message": "report.md, report.json, and capture.png. Recording captures also include capture.webm."
+  },
+  "instructionsTip1": {
+    "message": "Describe the symptom and the correct behavior before copying context. Do not assume a root cause."
+  },
+  "instructionsTip2": {
+    "message": "For API issues, trigger the request again after capture starts."
+  },
+  "instructionsTip3": {
+    "message": "Recordings contain no audio and stop automatically at the internal duration limit."
+  },
+  "instructionsTip4": {
+    "message": "Chrome internal pages, the store, PDFs, cross-origin iframes, and closed shadow roots are limited by browser permissions."
+  },
+  "instructionsFooter": {
+    "message": "Rootline does not call a model and does not upload data to a Rootline server. Remote mode only writes to your own object storage."
+  },
+  "settingsDocumentTitle": {
+    "message": "Rootline · Remote storage"
+  },
+  "settingsReadFailed": {
+    "message": "Could not read remote storage settings."
+  },
+  "settingsSaved": {
+    "message": "{provider} settings saved. Remote storage is on."
+  },
+  "settingsTested": {
+    "message": "Connected. A {provider} test file was uploaded, read publicly, and deleted."
+  },
+  "settingsCleared": {
+    "message": "{provider} settings cleared. Existing remote files were not deleted."
+  },
+  "settingsUseLocalDone": {
+    "message": "Switched to local storage. Files are written to the Chrome downloads folder / Rootline."
+  },
+  "settingsLoading": {
+    "message": "Reading remote storage settings…"
+  },
+  "settingsHeading": {
+    "message": "Remote storage"
+  },
+  "settingsClose": {
+    "message": "Close settings window"
+  },
+  "settingsCloseTitle": {
+    "message": "Close window"
+  },
+  "settingsEyebrow": {
+    "message": "Remote storage"
+  },
+  "settingsChooseProvider": {
+    "message": "Choose a cloud provider"
+  },
+  "settingsIntro": {
+    "message": "Rootline uploads the report, screenshot, and recording directly to your own object storage. It does not pass through a Rootline server."
+  },
+  "settingsProviders": {
+    "message": "Cloud provider"
+  },
+  "settingsPermissionTitle": {
+    "message": "Set access to “{permission}”"
+  },
+  "settingsPermissionPublicRead": {
+    "message": "Public read, private write"
+  },
+  "settingsPermissionAliyun": {
+    "message": "Public read, private write"
+  },
+  "settingsPermissionDetail": {
+    "message": "Do not choose public read-write. Public read lets an AI open the report. Private write stops strangers from uploading, overwriting, or deleting files."
+  },
+  "settingsCredentials": {
+    "message": "Credentials"
+  },
+  "settingsProviderInfo": {
+    "message": "{provider} details"
+  },
+  "settingsConfigured": {
+    "message": "Configured"
+  },
+  "settingsNotConfigured": {
+    "message": "Not configured"
+  },
+  "settingsObjectPrefix": {
+    "message": "Object prefix"
+  },
+  "settingsCustomDomain": {
+    "message": "Custom domain (optional)"
+  },
+  "settingsCustomDomainAria": {
+    "message": "Custom domain"
+  },
+  "settingsAliyunIdPlaceholder": {
+    "message": "Alibaba Cloud AccessKey ID"
+  },
+  "settingsAliyunSecretPlaceholder": {
+    "message": "Alibaba Cloud AccessKey Secret"
+  },
+  "settingsTencentIdPlaceholder": {
+    "message": "Tencent SecretId"
+  },
+  "settingsTencentKeyPlaceholder": {
+    "message": "Tencent SecretKey"
+  },
+  "settingsPrivacy": {
+    "message": "Rootline does not provide a cloud service and does not store or receive your reports, screenshots, recordings, or page content. Files upload only to the object storage you configure. Credentials stay in this browser extension and are not written into the report."
+  },
+  "settingsUseLocal": {
+    "message": "Switch to local storage"
+  },
+  "settingsClear": {
+    "message": "Clear settings"
+  },
+  "settingsTesting": {
+    "message": "Testing"
+  },
+  "settingsTest": {
+    "message": "Test connection"
+  },
+  "settingsSaving": {
+    "message": "Saving"
+  },
+  "settingsSave": {
+    "message": "Save settings"
+  },
+  "settingsLoadFailed": {
+    "message": "Remote storage settings failed to load"
+  },
+  "settingsLoadFailedDetail": {
+    "message": "Close the window and open it again."
+  },
+  "settingsTencentSummary": {
+    "message": "Tencent Cloud guide: create a sub-user, grant access, and create keys"
+  },
+  "settingsTencentNote": {
+    "message": "Prefer a CAM sub-user limited to the Rootline object prefix. An existing key also works. You do not need a sub-account ID."
+  },
+  "settingsTencentStep1": {
+    "message": "Open the Tencent COS console, create a bucket, and record the full Bucket and Region. Set access to public read, private write."
+  },
+  "settingsTencentConsole": {
+    "message": "Tencent COS console"
+  },
+  "settingsTencentStep2": {
+    "message": "In the bucket domain or object metadata, turn off forced download and set Content-Disposition to inline."
+  },
+  "settingsTencentStep3": {
+    "message": "In CAM user management, create a sub-user and grant PutObject, GetObject, HeadObject, and DeleteObject on rootline/*."
+  },
+  "settingsTencentUsers": {
+    "message": "CAM user management"
+  },
+  "settingsTencentStep4": {
+    "message": "Create a SecretId and SecretKey on the sub-user API key page, or open API key management. Do not grant only QcloudCollApiKeyManageAccess."
+  },
+  "settingsTencentKeys": {
+    "message": "API key management"
+  },
+  "settingsTencentStep5": {
+    "message": "Under Security → CORS, allow PUT, GET, HEAD, DELETE, and OPTIONS, and expose Content-Disposition, Content-Type, Content-Length, and ETag."
+  },
+  "settingsTencentStep6": {
+    "message": "Set a 7-day or 30-day lifecycle so old captures are cleaned up automatically."
+  },
+  "settingsTencentWarning": {
+    "message": "If the test returns 403, check that the Bucket includes the owner APPID suffix, plus object permissions and CORS."
+  },
+  "settingsAliyunSummary": {
+    "message": "Alibaba Cloud OSS guide: create a RAM user, grant access, and create keys"
+  },
+  "settingsAliyunNote": {
+    "message": "Prefer a RAM user limited to the Rootline object prefix. Rootline connects from the browser with an AccessKey and does not need a Rootline service."
+  },
+  "settingsAliyunStep1": {
+    "message": "Open the Alibaba Cloud OSS console, create a bucket, and record the Bucket and Region. Set read/write access to public read, private write."
+  },
+  "settingsAliyunConsole": {
+    "message": "Alibaba Cloud OSS console"
+  },
+  "settingsAliyunStep2": {
+    "message": "In the bucket domain or object metadata, turn off forced download and set Content-Disposition to inline."
+  },
+  "settingsAliyunStep3": {
+    "message": "Open RAM user management, create a user, and follow the Bucket Policy docs to grant PutObject, GetObject, HeadObject, and DeleteObject on the bucket’s rootline/* prefix."
+  },
+  "settingsAliyunUsers": {
+    "message": "RAM user management"
+  },
+  "settingsAliyunPolicy": {
+    "message": "Bucket Policy docs"
+  },
+  "settingsAliyunStep4": {
+    "message": "Under the RAM user’s Authentication → AccessKey, create an AccessKey ID and Secret, or open AccessKey management. Do not use the Alibaba Cloud account root key."
+  },
+  "settingsAliyunKeys": {
+    "message": "AccessKey management"
+  },
+  "settingsAliyunStep5": {
+    "message": "Under OSS Data Security → CORS, allow PUT, GET, HEAD, DELETE, and OPTIONS, expose Content-Disposition, Content-Type, Content-Length, and ETag, and see the OSS CORS docs."
+  },
+  "settingsAliyunCors": {
+    "message": "OSS CORS docs"
+  },
+  "settingsAliyunStep6": {
+    "message": "Set a 7-day or 30-day lifecycle so old captures are cleaned up. Do not paste the AccessKey into reports, tickets, or chat."
+  },
+  "settingsAliyunWarning": {
+    "message": "If the test returns 403, check RAM object permissions, bucket access, Region, and CORS. Public read lets an AI read the report. Do not enable public read-write."
+  },
+  "popupUnsupportedDetail": {
+    "message": "Rootline can only capture ordinary HTTP/HTTPS pages. Chrome internal pages, the Chrome Web Store, and PDFs cannot be captured."
+  },
+  "pageUntitled": {
+    "message": "Untitled page"
+  },
+  "pageUserAgentPending": {
+    "message": "Waiting for the page collector"
+  },
+  "errorCaptureInProgress": {
+    "message": "Another capture is already running on this page. Finish or discard it first."
+  },
+  "errorOverlayNotVisible": {
+    "message": "The capture panel did not appear. Try again."
+  },
+  "errorConfigureProvider": {
+    "message": "Configure {provider} first."
+  },
+  "errorInjectFailed": {
+    "message": "Could not inject the Rootline collector into this page."
+  },
+  "errorReannotateOnlyFinished": {
+    "message": "Only a finished capture can be annotated again."
+  },
+  "errorSessionMismatch": {
+    "message": "The page session could not be verified."
+  },
+  "errorReconnectFailed": {
+    "message": "Could not reconnect to this page."
+  },
+  "errorProviderConfigMissing": {
+    "message": "{provider} settings are missing. Configure them again and retry."
+  },
+  "errorRemoteUploadFailed": {
+    "message": "Could not upload to remote storage."
+  },
+  "errorLocalWriteFailed": {
+    "message": "Could not write the local capture files."
+  },
+  "errorSessionExpired": {
+    "message": "The capture session is missing or has expired."
+  },
+  "errorRecordingUnusable": {
+    "message": "This recording did not produce a usable video. Record it again."
+  },
+  "errorToolbarHiddenFailed": {
+    "message": "Could not confirm the Rootline toolbar was hidden. Try again."
+  },
+  "errorNoExportRecord": {
+    "message": "This capture has no record that can be exported again."
+  },
+  "errorReexportFailed": {
+    "message": "Could not export the report again."
+  },
+  "errorRemoteTestFailed": {
+    "message": "Could not test the remote storage connection."
+  },
+  "errorCosTestFailed": {
+    "message": "Could not test the Tencent COS connection."
+  },
+  "errorNoRemoteLink": {
+    "message": "This capture has no remote report link."
+  },
+  "errorSessionEnded": {
+    "message": "The page session has ended."
+  },
+  "errorCaptureEnded": {
+    "message": "The capture session has ended."
+  },
+  "errorRecordingSyncFailed": {
+    "message": "Could not sync the stopped recording."
+  },
+  "errorProgressSource": {
+    "message": "The remote save progress message could not be verified."
+  },
+  "errorProgressSyncFailed": {
+    "message": "Could not sync remote save progress."
+  },
+  "errorDownloadSource": {
+    "message": "The download message could not be verified."
+  },
+  "errorFileSaveFailed": {
+    "message": "Could not save the file."
+  },
+  "errorDownloadCleanupSource": {
+    "message": "The download cleanup message could not be verified."
+  },
+  "errorDownloadCleanupFailed": {
+    "message": "Could not clean up the incomplete download."
+  },
+  "errorScreenshotDenied": {
+    "message": "The browser did not allow the screenshot."
+  },
+  "errorEvidenceSaveFailed": {
+    "message": "Could not save this evidence: {message}"
+  },
+  "errorElementLine": {
+    "message": "Element {index}: {text}"
+  },
+  "recordingFrameLabel": {
+    "message": "Mark {index}"
+  },
+  "boundaryCaptureWindow": {
+    "message": "Console and network evidence only cover the time after you start capture."
+  },
+  "boundaryPrivacy": {
+    "message": "Cookies, local storage, password fields, and browsing history are not captured."
+  },
+  "boundaryFrame": {
+    "message": "Cross-origin iframes and closed shadow roots cannot be read."
+  },
+  "boundarySnapshotUnavailable": {
+    "message": "The page may have refreshed or closed, so the final snapshot is incomplete."
+  },
+  "boundaryRemoteHistory": {
+    "message": "The remote report was uploaded, but this browser could not save the local history entry."
+  },
+  "runtimeReactTimeout": {
+    "message": "Timed out while reading React runtime info."
+  },
+  "runtimeReactUnavailable": {
+    "message": "This element does not expose a React Fiber. Production builds and non-React pages do this."
+  },
+  "runtimeTargetGone": {
+    "message": "The target element is no longer on the page."
+  },
+  "errorOffscreenRecordingFailed": {
+    "message": "Background recording failed."
+  },
+  "errorCaptureProcessingFailed": {
+    "message": "Could not process the capture files."
+  },
+  "errorRecordingExecuteFailed": {
+    "message": "Could not run background recording."
+  },
+  "errorRecordingAlreadyActive": {
+    "message": "A Rootline recording is already in progress. Stop it first."
+  },
+  "errorRecordingNotStarted": {
+    "message": "Background recording did not start."
+  },
+  "errorRecordingSessionSaveFailed": {
+    "message": "Recording started, but the capture session was not saved."
+  },
+  "errorRecordingTempMissing": {
+    "message": "The recording was not saved to temporary storage."
+  },
+  "errorRecordingSessionMissing": {
+    "message": "The recording was created, but the capture session is missing."
+  },
+  "errorDisplayMediaUnsupported": {
+    "message": "This browser cannot record the full screen."
+  },
+  "errorNoVideoTrack": {
+    "message": "No usable screen video was provided."
+  },
+  "errorRecordingCanvasFailed": {
+    "message": "Could not prepare the recording canvas."
+  },
+  "errorDownloadFilename": {
+    "message": "The download filename must be a path inside the Chrome downloads folder."
+  },
+  "errorDownloadFilenameSegment": {
+    "message": "The download filename contains an invalid path segment."
+  },
+  "errorDownloadRecordMissing": {
+    "message": "Chrome did not return a download record."
+  },
+  "errorDownloadInterrupted": {
+    "message": "The file download was interrupted: {detail}"
+  },
+  "errorDownloadInterruptedBare": {
+    "message": "The file download was interrupted."
+  },
+  "errorUnknown": {
+    "message": "Unknown error"
+  },
+  "errorDownloadTimeout": {
+    "message": "Saving the file took longer than 30 seconds. Check Chrome's download settings and try again."
+  },
+  "errorDownloadPathMissing": {
+    "message": "Chrome did not return the saved file path."
+  },
+  "errorRemoteUrlProtocol": {
+    "message": "The remote report link must use HTTP or HTTPS."
+  },
+  "errorLocalPathMissing": {
+    "message": "Chrome did not return a valid local file path."
+  },
+  "errorOffscreenUnsupported": {
+    "message": "This Chrome version cannot record in the background or write local files."
+  },
+  "errorCaptureCanvasFailed": {
+    "message": "The browser could not create a screenshot canvas."
+  },
+  "errorScreenshotFormat": {
+    "message": "The annotated screenshot format is invalid."
+  },
+  "errorReportDirectoryMissing": {
+    "message": "The capture report is missing its local directory."
+  },
+  "errorScreenshotMissing": {
+    "message": "There is no page screenshot to write."
+  },
+  "errorRecordingTempLostLocal": {
+    "message": "The temporary recording is gone, so capture.webm cannot be written."
+  },
+  "errorRecordLocationMissing": {
+    "message": "The capture record is missing its file location."
+  },
+  "errorLocalLocationMissing": {
+    "message": "The capture record is missing its local file location."
+  },
+  "errorRecordGone": {
+    "message": "The capture record is missing or its local index was cleared."
+  },
+  "errorRemoteRecordNeedsProvider": {
+    "message": "This is a remote report. Select the original cloud provider in remote storage settings, then export again."
+  },
+  "errorRemoteRecordingOpenFailed": {
+    "message": "Could not open the remote recording. The link may have expired. Check the cloud file and try again."
+  },
+  "errorLocalRecordingPermission": {
+    "message": "Could not open the local recording. This extension is missing permission to open downloads. Reload the latest version and try again."
+  },
+  "errorLocalRecordingOpenFailed": {
+    "message": "Could not open the local recording. Chrome refused to open the download. Confirm the file still exists and try again."
+  },
+  "errorRemoteStageFailed": {
+    "message": "{stage} failed: {message}"
+  },
+  "remoteStageAnnotatedShot": {
+    "message": "Create the remote annotated screenshot"
+  },
+  "remoteStageReadRecording": {
+    "message": "Read the temporary recording"
+  },
+  "remoteStageUploadRecording": {
+    "message": "Upload the recording"
+  },
+  "remoteStageUploadReport": {
+    "message": "Upload the remote report"
+  },
+  "errorUploadScreenshotMissing": {
+    "message": "There is no page screenshot to upload."
+  },
+  "errorRecordingTempLostRemote": {
+    "message": "The temporary recording is gone, so capture.webm cannot be uploaded."
+  },
+  "errorRemoteRecordGone": {
+    "message": "The remote capture record is missing or its screenshot cache was cleared."
+  },
+  "errorRemoteConfigMissing": {
+    "message": "Remote settings are missing. Configure them again and retry."
+  },
+  "errorRemoteConfigMismatch": {
+    "message": "The current remote settings do not match this history record. Switch back to the original Bucket, Region, and domain, then retry."
+  },
+  "errorObjectPrefixSegment": {
+    "message": "The object prefix contains an invalid path segment."
+  },
+  "errorCustomDomainHttps": {
+    "message": "The custom domain must use HTTPS."
+  },
+  "errorCosPublicRead": {
+    "message": "The test file uploaded, but it is not publicly readable. Set the bucket to public read, private write. Do not choose public read-write."
+  },
+  "errorCosForcedDownload": {
+    "message": "COS is forcing downloads, so the browser will download report.html. Turn off forced download in the COS console and test the connection again."
+  },
+  "errorCosReadMismatch": {
+    "message": "The COS test file did not match. Check the access domain."
+  },
+  "errorCosDeleteFailed": {
+    "message": "The test file uploaded and could be read, but deleting it failed. Grant this Tencent key delete access for the object prefix."
+  },
+  "errorOssPublicRead": {
+    "message": "The test file uploaded, but it is not publicly readable. Set OSS access to public read, private write. Do not choose public read-write."
+  },
+  "errorOssForcedDownload": {
+    "message": "OSS is forcing downloads. Set the response content disposition to inline and test the connection again."
+  },
+  "errorOssReadMismatch": {
+    "message": "The OSS test file did not match. Check the access domain."
+  },
+  "errorOssDeleteFailed": {
+    "message": "The test file uploaded and could be read, but deleting it failed. Grant DeleteObject on the object prefix."
+  },
+  "errorDiagnostic": {
+    "message": " ({detail})"
+  },
+  "errorCosInvalidAccessKey": {
+    "message": "Tencent COS does not recognize this SecretId. Confirm the key is still enabled{diagnostic}."
+  },
+  "errorCosSignatureMismatch": {
+    "message": "The Tencent COS request signature does not match{diagnostic}. Confirm the computer clock is accurate, and that the Bucket and Region match the configuration that just tested successfully. This does not mean the SecretKey is invalid."
+  },
+  "errorCosAccessDenied": {
+    "message": "Tencent COS denied access{diagnostic}. Check that the sub-account has COS object permissions (PutObject, GetObject, HeadObject, DeleteObject). QcloudCollApiKeyManageAccess only manages API keys and does not include COS read/write access. Also check the Bucket, Region, and CORS settings."
+  },
+  "errorCosBucketMissing": {
+    "message": "The Tencent COS bucket was not found{diagnostic}. Check the Bucket and Region."
+  },
+  "errorCosTimeout": {
+    "message": "The Tencent COS request timed out{diagnostic}. Rootline checked the remote object but could not confirm the upload finished. Check the network and try again."
+  },
+  "errorCosNetwork": {
+    "message": "Could not reach Tencent COS{diagnostic}. Check the network and that CORS allows PUT, GET, HEAD, DELETE, and OPTIONS."
+  },
+  "errorCosUploadFailed": {
+    "message": "The Tencent COS upload failed. Check the settings and try again."
+  },
+  "errorCosCleanupFailed": {
+    "message": "Could not clean up the Tencent COS file."
+  },
+  "errorOssInvalidAccessKey": {
+    "message": "Alibaba Cloud OSS does not recognize this AccessKey ID{diagnostic}. Confirm the key is still enabled."
+  },
+  "errorOssSignatureMismatch": {
+    "message": "The Alibaba Cloud OSS request signature does not match{diagnostic}. Check the Region, Bucket, and computer clock."
+  },
+  "errorOssAccessDenied": {
+    "message": "Alibaba Cloud OSS denied access{diagnostic}. Check that the RAM user has PutObject, GetObject, HeadObject, and DeleteObject on rootline/*, and check CORS."
+  },
+  "errorOssBucketMissing": {
+    "message": "The Alibaba Cloud OSS bucket was not found{diagnostic}. Check the Bucket and Region."
+  },
+  "errorOssNetwork": {
+    "message": "Could not reach Alibaba Cloud OSS. Check the network and that CORS allows PUT, GET, HEAD, DELETE, and OPTIONS."
+  },
+  "errorOssUploadFailed": {
+    "message": "The Alibaba Cloud OSS upload failed. Check the settings and try again."
+  },
+  "errorOssCleanupFailed": {
+    "message": "Could not clean up the Alibaba Cloud OSS file."
+  },
+  "errorScreenshotUnreadable": {
+    "message": "Could not read the page screenshot."
+  },
+  "errorScreenMetadataTimeout": {
+    "message": "Timed out waiting for the screen video metadata."
+  },
+  "errorScreenStreamUnreadable": {
+    "message": "Could not read the screen video stream."
+  },
+  "recordingActivePage": {
+    "message": "Page being recorded"
+  },
+  "errorHistoryDbOpen": {
+    "message": "Could not open the Rootline capture history database."
+  },
+  "errorHistoryOperation": {
+    "message": "The Rootline capture history operation failed."
+  },
+  "errorHistoryTransaction": {
+    "message": "The Rootline capture history transaction failed."
+  },
+  "errorRecordingDbOpen": {
+    "message": "Could not open the temporary recording database."
+  },
+  "errorRecordingDbIo": {
+    "message": "Could not read or write the temporary recording."
+  },
+  "errorRecordingDbTransaction": {
+    "message": "The temporary recording transaction failed."
+  },
+  "errorRecordingInterrupted": {
+    "message": "The recording process was interrupted. Discard this capture and record it again."
+  },
+  "errorRecordingNoFile": {
+    "message": "Recording stopped, but no usable video file was created."
+  },
+  "errorRecordingLimitStopFailed": {
+    "message": "Could not stop recording after it reached the time limit."
+  },
+  "errorRecordingResultUnsaved": {
+    "message": "Recording stopped, but the result was not saved."
+  },
+  "recordingFrameEnded": {
+    "message": "Recording ended"
+  },
+  "settingsBucketTencent": {
+    "message": "Bucket should be name-APPID, for example rootline-1250000000."
+  },
+  "settingsRegionTencent": {
+    "message": "Region format is invalid. Example: ap-guangzhou."
+  },
+  "settingsSecretIdInvalid": {
+    "message": "Enter a valid SecretId."
+  },
+  "settingsSecretKeyInvalid": {
+    "message": "Enter a valid SecretKey."
+  },
+  "settingsBucketAliyun": {
+    "message": "Bucket format is invalid."
+  },
+  "settingsRegionAliyun": {
+    "message": "Region format is invalid. Example: cn-guangzhou."
+  },
+  "settingsAccessKeyIdInvalid": {
+    "message": "Enter a valid AccessKey ID."
+  },
+  "settingsAccessKeySecretInvalid": {
+    "message": "Enter a valid AccessKey Secret."
+  },
+  "settingsPublicUrlInvalid": {
+    "message": "The custom domain must be a full HTTPS address."
+  }
+}

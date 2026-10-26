@@ -1,3 +1,4 @@
+import { t } from "./i18n"
 import type { RootlineReportV1 } from "./types"
 import { withoutScreenshotPayload } from "./screenshot-payload"
 
@@ -22,7 +23,7 @@ function openDatabase(): Promise<IDBDatabase> {
       }
     }
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error ?? new Error("无法打开 Rootline 采集历史数据库。"))
+    request.onerror = () => reject(request.error ?? new Error(t("errorHistoryDbOpen")))
   })
 }
 
@@ -37,8 +38,8 @@ async function requestStore<TResult>(
       const request = operation(transaction.objectStore(RECORD_STORE))
       let result: TResult
       request.onsuccess = () => { result = request.result }
-      request.onerror = () => reject(request.error ?? new Error("Rootline 采集历史操作失败。"))
-      transaction.onerror = () => reject(transaction.error ?? new Error("Rootline 采集历史事务失败。"))
+      request.onerror = () => reject(request.error ?? new Error(t("errorHistoryOperation")))
+      transaction.onerror = () => reject(transaction.error ?? new Error(t("errorHistoryTransaction")))
       transaction.oncomplete = () => resolve(result!)
     })
   } finally {

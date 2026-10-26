@@ -1,3 +1,4 @@
+import { providerName } from "./i18n"
 import type { AliyunOssConfig, RemoteStorageConfig, TencentCosConfig } from "./types"
 import { buildOssObjectUrl, deleteOssObject, joinOssKey, putOssObject, testAliyunOssConnection } from "./aliyun-oss"
 import { buildCosObjectUrl, deleteCosObject, joinCosKey, putCosObject, testTencentCosConnection, type PutCosObjectOptions } from "./tencent-cos"
@@ -9,7 +10,7 @@ export function isTencentConfig(config: RemoteStorageConfig): config is TencentC
 export function isAliyunConfig(config: RemoteStorageConfig): config is AliyunOssConfig { return config.provider === "aliyun-oss" }
 
 export function providerLabel(config: Pick<RemoteStorageConfig, "provider">): string {
-  return config.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"
+  return providerName(config.provider)
 }
 
 export function buildRemoteObjectUrl(config: RemoteStorageConfig, key: string): string {

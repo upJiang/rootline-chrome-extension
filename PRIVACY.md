@@ -26,4 +26,4 @@ Rootline 在数据进入 Chrome session storage 前处理敏感 Header、URL Que
 
 ## 本地存储与清理
 
-活动会话保存在 `chrome.storage.session`，不跨浏览器重启长期保留，并会在过期后自动清理。录屏 Blob 和最多 24 个关键帧临时保存在扩展 IndexedDB，成功写入本地文件后清理。完成后的报告、JSON、标注截图和可选 `capture.webm` 自动写入 Chrome 下载目录下的 `Rootline` 子目录。Rootline 仅在 IndexedDB 保留报告历史索引和标注截图缓存，不上传这些内容。
+活动会话保存在 `chrome.storage.session`，不跨浏览器重启长期保留，并会在过期后自动清理。录屏 Blob 和最多 24 个关键帧临时保存在扩展 IndexedDB，成功写入本地文件后清理。完成后的报告、JSON、标注截图和可选 `capture.webm` 自动写入 Chrome 下载目录下的 `Rootline` 子目录。Rootline 仅在 IndexedDB 保留报告历史索引和标注截图缓存，不上传这些内容。界面语言偏好保存在 `chrome.storage.local`，只用于切换扩展界面文案。

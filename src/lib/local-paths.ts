@@ -1,6 +1,8 @@
+import { t } from "./i18n"
+
 export function parentDirectoryPath(filename: string): string {
   const index = Math.max(filename.lastIndexOf("/"), filename.lastIndexOf("\\"))
-  if (index <= 0) throw new Error("Chrome 没有返回有效的本地文件路径。")
+  if (index <= 0) throw new Error(t("errorLocalPathMissing"))
   return filename.slice(0, index)
 }
 

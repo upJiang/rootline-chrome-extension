@@ -22,7 +22,9 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "../../components/Brand"
+import { LocaleToggle, useI18n } from "../../components/LocaleToggle"
 import { Notice } from "../../components/Notice"
+import { formatDateTime, getLocale, localizeKnownCopy, providerName, t, type MessageKey } from "../../src/lib/i18n"
 import { createExportArtifacts, downloadArtifacts, renderAnnotatedCapture } from "../../src/lib/export"
 import { openCaptureRecording, readCaptureRecord, reexportCaptureRecord, updateCaptureRecordIssue } from "../../src/lib/local-artifacts"
 import { reexportRemoteCaptureRecord, updateRemoteCaptureRecordIssue } from "../../src/lib/remote-artifacts"
@@ -44,18 +46,57 @@ type TabId = "issue" | "elements" | "console" | "network" | "environment" | "ai"
 type Feedback = { tone: "error" | "success"; message: string }
 type MediaMode = "screenshot" | "recording"
 
-const TABS: Array<{ id: TabId; label: string; icon: typeof Box }> = [
-  { id: "issue", label: "问题", icon: AlertCircle },
-  { id: "elements", label: "元素", icon: Box },
-  { id: "console", label: "控制台", icon: TerminalSquare },
-  { id: "network", label: "网络", icon: Network },
-  { id: "environment", label: "环境", icon: Monitor },
-  { id: "ai", label: "AI 上下文", icon: Code2 },
+const TABS: Array<{ id: TabId; label: MessageKey; icon: typeof Box }> = [
+  { id: "issue", label: "diagnosisTabIssue", icon: AlertCircle },
+  { id: "elements", label: "diagnosisTabElements", icon: Box },
+  { id: "console", label: "diagnosisTabConsole", icon: TerminalSquare },
+  { id: "network", label: "diagnosisTabNetwork", icon: Network },
+  { id: "environment", label: "diagnosisTabEnvironment", icon: Monitor },
+  { id: "ai", label: "diagnosisTabAi", icon: Code2 },
 ]
+
+const MISSING_LABELS = {
+  "问题现象": "diagnosisMissingSymptom",
+  "期望结果": "diagnosisMissingExpected",
+  "目标元素": "diagnosisMissingTargets",
+  "页面截图": "diagnosisMissingScreenshot",
+  "录屏文件": "diagnosisMissingRecording",
+  "控制台或网络事件": "diagnosisMissingEvents",
+} as const satisfies Record<string, MessageKey>
+
+const LEVEL_LABELS = {
+  "完整": "diagnosisLevelComplete",
+  "可用": "diagnosisLevelUsable",
+  "待补充": "diagnosisLevelIncomplete",
+} as const satisfies Record<string, MessageKey>
+
+function translateMissing(items: string[]): string {
+  return items.map((item) => (item in MISSING_LABELS ? t(MISSING_LABELS[item as keyof typeof MISSING_LABELS]) : item)).join(getLocale() === "en" ? ", " : "、")
+}
+
+function translateLevel(level: string): string {
+  return level in LEVEL_LABELS ? t(LEVEL_LABELS[level as keyof typeof LEVEL_LABELS]) : level
+}
+
+function boundaryText(boundary: { code: string; message: string }): string {
+  switch (boundary.code) {
+    case "capture-window": return t("boundaryCaptureWindow")
+    case "privacy": return t("boundaryPrivacy")
+    case "frame-boundary": return t("boundaryFrame")
+    case "snapshot-unavailable": return t("boundarySnapshotUnavailable")
+    case "remote-history-unavailable": return t("boundaryRemoteHistory")
+    default: return localizeKnownCopy(boundary.message)
+  }
+}
+
+function frameLabel(label: string): string {
+  const match = /^(?:标注元素|Mark) (\d+)$/.exec(label)
+  return match?.[1] ? t("recordingFrameLabel", { index: match[1] }) : localizeKnownCopy(label)
+}
 
 async function request<T>(message: unknown): Promise<T> {
   const response = (await chrome.runtime.sendMessage(message)) as ExtensionResponse<T>
-  if (!response?.ok) throw new Error(response?.error ?? "Rootline 操作失败。")
+  if (!response?.ok) throw new Error(response?.error ?? t("commonOperationFailed"))
   return response.data as T
 }
 
@@ -68,8 +109,7 @@ function recordFromLocation(): string | null {
 }
 
 function displayTime(value: string): string {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("zh-CN", { hour12: false })
+  return formatDateTime(value)
 }
 
 function statusTone(status?: number): "success" | "warning" | "error" | "neutral" {
@@ -118,6 +158,7 @@ async function persistIssue(session: RootlineSession, recordDirectory: string | 
 }
 
 export function DiagnosisApp() {
+  const { locale } = useI18n()
   const [session, setSession] = useState<RootlineSession | null>(null)
   const [issue, setIssue] = useState<RootlineIssue>({ description: "", expectedResult: "", notes: "" })
   const [activeTab, setActiveTab] = useState<TabId>("issue")
@@ -151,7 +192,7 @@ export function DiagnosisApp() {
     const recordDirectoryName = recordFromLocation()
     const sessionId = sessionIdFromLocation()
     if (!recordDirectoryName && !sessionId) {
-      showFeedback({ tone: "error", message: "采集链接缺少记录参数。" })
+      showFeedback({ tone: "error", message: t("diagnosisMissingRecord") })
       setLoading(false)
       return
     }
@@ -194,7 +235,7 @@ export function DiagnosisApp() {
         })
     void load
       .catch((error: unknown) => {
-        showFeedback({ tone: "error", message: error instanceof Error ? error.message : "无法读取采集记录。" })
+        showFeedback({ tone: "error", message: error instanceof Error ? error.message : t("diagnosisReadFailed") })
       })
       .finally(() => setLoading(false))
     return () => {
@@ -206,6 +247,10 @@ export function DiagnosisApp() {
   useEffect(() => () => {
     if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current)
   }, [])
+
+  useEffect(() => {
+    document.title = t("diagnosisDocumentTitle")
+  }, [locale])
 
   useEffect(() => {
     if (!session || recordDirectory) return
@@ -223,7 +268,7 @@ export function DiagnosisApp() {
           setDirty(false)
         })
         .catch((error: unknown) => {
-          showFeedback({ tone: "error", message: error instanceof Error ? error.message : "问题描述保存失败。" })
+          showFeedback({ tone: "error", message: error instanceof Error ? error.message : t("diagnosisSaveIssueFailed") })
         })
     }, 600)
     return () => window.clearTimeout(timeout)
@@ -235,7 +280,7 @@ export function DiagnosisApp() {
   }
 
   const saveIssue = useCallback(async (): Promise<RootlineSession> => {
-    if (!session) throw new Error("采集记录尚未加载。")
+    if (!session) throw new Error(t("diagnosisSessionNotLoaded"))
     if (!dirty) return session
     const nextSession = await persistIssue(session, recordDirectory, issue)
     setSession(nextSession)
@@ -249,9 +294,9 @@ export function DiagnosisApp() {
     try {
       const nextSession = await saveIssue()
       await copyText(nextSession.remoteArtifacts ? buildRemoteAiContext(nextSession.remoteArtifacts) : buildReportMarkdown(createReport(nextSession)))
-      showFeedback({ tone: "success", message: nextSession.remoteArtifacts ? "AI 上下文已复制，复用现有 COS 链接。" : "AI 上下文已复制，包含本地报告和截图路径。" })
+      showFeedback({ tone: "success", message: nextSession.remoteArtifacts ? t("diagnosisContextCopiedRemote") : t("diagnosisContextCopiedLocal") })
     } catch (error) {
-      showFeedback({ tone: "error", message: error instanceof Error ? error.message : "复制失败。" })
+      showFeedback({ tone: "error", message: error instanceof Error ? error.message : t("commonCopyFailed") })
     } finally {
       setBusy(null)
     }
@@ -264,9 +309,9 @@ export function DiagnosisApp() {
     setFeedback(null)
     try {
       await copyText(reportUrl)
-      showFeedback({ tone: "success", message: "报告链接已复制，可直接打开或粘贴给 AI。" })
+      showFeedback({ tone: "success", message: t("diagnosisLinkCopied") })
     } catch (error) {
-      showFeedback({ tone: "error", message: error instanceof Error ? error.message : "报告链接复制失败。" })
+      showFeedback({ tone: "error", message: error instanceof Error ? error.message : t("diagnosisLinkCopyFailed") })
     } finally {
       setBusy(null)
     }
@@ -280,7 +325,7 @@ export function DiagnosisApp() {
     try {
       await chrome.tabs.create({ url: reportUrl })
     } catch (error) {
-      showFeedback({ tone: "error", message: error instanceof Error ? error.message : "远程报告打开失败。" })
+      showFeedback({ tone: "error", message: error instanceof Error ? error.message : t("diagnosisRemoteOpenFailed") })
     } finally {
       setBusy(null)
     }
@@ -294,21 +339,21 @@ export function DiagnosisApp() {
       if (recordDirectory && nextSession.remoteArtifacts) {
         const report = await reexportRemoteCaptureRecord(recordDirectory)
         setSession(report)
-        showFeedback({ tone: "success", message: "远程 report.html 已重新导出。" })
+        showFeedback({ tone: "success", message: t("diagnosisRemoteExported") })
       } else if (recordDirectory) {
         const record = await reexportCaptureRecord(recordDirectory)
         setSession(record.report)
-        showFeedback({ tone: "success", message: `报告已重新导出到 ${record.location?.directoryPath ?? "本地保存位置"}。` })
+        showFeedback({ tone: "success", message: t("diagnosisExportedTo", { path: record.location?.directoryPath ?? t("diagnosisLocalSave") }) })
       } else {
         const artifacts = await createExportArtifacts(nextSession)
         await downloadArtifacts(artifacts)
         await request({ type: "MARK_EXPORTED", sessionId: nextSession.id })
         setSession({ ...nextSession, status: "exported" })
         setAnnotatedCapture(artifacts.captureDataUrl ?? nextSession.screenshot.dataUrl ?? null)
-        showFeedback({ tone: "success", message: `报告已导出到 ${artifacts.directory}。` })
+        showFeedback({ tone: "success", message: t("diagnosisExportedDir", { directory: artifacts.directory }) })
       }
     } catch (error) {
-      showFeedback({ tone: "error", message: error instanceof Error ? error.message : "重新导出失败。" })
+      showFeedback({ tone: "error", message: error instanceof Error ? error.message : t("diagnosisExportFailed") })
     } finally {
       setBusy(null)
     }
@@ -330,14 +375,14 @@ export function DiagnosisApp() {
   }
 
   if (loading) {
-    return <main className="diagnosis-loading"><LoaderCircle aria-hidden="true" className="animate-spin" size={22} />正在读取采集现场…</main>
+    return <main className="diagnosis-loading"><LoaderCircle aria-hidden="true" className="animate-spin" size={22} />{t("diagnosisLoading")}</main>
   }
 
   if (!session) {
     return (
       <main className="diagnosis-empty">
         <Brand />
-        <Notice title="无法打开采集报告" tone="error">{feedback?.message ?? "记录可能已移动、损坏或无法访问。"}</Notice>
+        <Notice title={t("diagnosisOpenFailed")} tone="error">{feedback?.message ? localizeKnownCopy(feedback.message) : t("diagnosisRecordUnavailable")}</Notice>
       </main>
     )
   }
@@ -364,47 +409,48 @@ export function DiagnosisApp() {
           </div>
         </div>
         <div className="diagnosis-header__actions">
-          <CompletenessBadge level={completeness.level} score={completeness.score} />
+          <LocaleToggle />
+          <CompletenessBadge level={translateLevel(completeness.level)} score={completeness.score} />
           {session.remoteArtifacts ? <>
             <button className="rl-button" disabled={busy !== null} onClick={() => void openRemoteReport()} type="button">
               {busy === "open-remote" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <ExternalLink aria-hidden="true" size={17} />}
-              打开远程报告
+              {t("diagnosisOpenRemote")}
             </button>
             <button className="rl-button" disabled={busy !== null} onClick={() => void copyRemoteReportLink()} type="button">
               {busy === "copy-link" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Clipboard aria-hidden="true" size={17} />}
-              复制报告链接
+              {t("diagnosisCopyLink")}
             </button>
           </> : null}
           <button className="rl-button" disabled={busy !== null} onClick={copyContext} type="button">
             {busy === "copy" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Clipboard aria-hidden="true" size={17} />}
-            复制 AI 上下文
+            {t("diagnosisCopyContext")}
           </button>
           <button className="rl-button rl-button--primary" disabled={busy !== null} onClick={exportReport} type="button">
             {busy === "export" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Download aria-hidden="true" size={17} />}
-            重新导出报告
+            {t("diagnosisExportAgain")}
           </button>
         </div>
       </header>
 
       {feedback ? (
         <div className="feedback-strip">
-          <Notice title={feedback.message} tone={feedback.tone} />
+          <Notice title={localizeKnownCopy(feedback.message)} tone={feedback.tone} />
         </div>
       ) : null}
 
       <div className="diagnosis-workspace">
-        <section aria-label="页面媒体证据" className="capture-pane">
+        <section aria-label={t("diagnosisMediaEvidence")} className="capture-pane">
           <div className="pane-heading">
             <div>
-              <p className="pane-eyebrow">{session.remoteArtifacts ? "远程媒体证据" : "本地媒体证据"}</p>
-              <h1>运行现场</h1>
+              <p className="pane-eyebrow">{session.remoteArtifacts ? t("diagnosisRemoteMedia") : t("diagnosisLocalMedia")}</p>
+              <h1>{t("diagnosisRuntimeTitle")}</h1>
             </div>
             <span className="rl-mono rl-muted text-xs">{session.page.viewport.width} × {session.page.viewport.height} @ {session.page.viewport.devicePixelRatio}x</span>
           </div>
           {session.recording ? (
-            <div aria-label="媒体类型" className="media-switch" role="group">
-              <button aria-pressed={mediaMode === "screenshot"} onClick={() => setMediaMode("screenshot")} type="button"><Monitor aria-hidden="true" size={15} />标注截图</button>
-              <button aria-pressed={mediaMode === "recording"} onClick={() => setMediaMode("recording")} type="button"><Video aria-hidden="true" size={15} />页面录屏</button>
+            <div aria-label={t("diagnosisMediaType")} className="media-switch" role="group">
+              <button aria-pressed={mediaMode === "screenshot"} onClick={() => setMediaMode("screenshot")} type="button"><Monitor aria-hidden="true" size={15} />{t("diagnosisAnnotatedShot")}</button>
+              <button aria-pressed={mediaMode === "recording"} onClick={() => setMediaMode("recording")} type="button"><Video aria-hidden="true" size={15} />{t("diagnosisPageRecording")}</button>
             </div>
           ) : null}
           <div className="capture-stage" data-media={mediaMode}>
@@ -413,15 +459,15 @@ export function DiagnosisApp() {
             ) : mediaMode === "recording" && recordingAvailability ? (
               <div className="capture-missing">
                 <ImageOff aria-hidden="true" size={28} />
-                <p>{session.remoteArtifacts ? (recordingAvailability === "available" ? `录屏已保存到${session.remoteArtifacts.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}` : "远程录屏链接无法访问") : recordingAvailability === "available" ? "录屏保存在本地下载目录" : recordingAvailability === "unknown" ? "Chrome 下载记录已清理，无法确认录屏位置" : "报告包含录屏信息，但 capture.webm 已缺失"}</p>
-                {recordingAvailability === "available" && recordDirectory ? <button className="rl-button" onClick={() => void openCaptureRecording(recordDirectory)} type="button"><Video aria-hidden="true" size={16} />{session.remoteArtifacts ? "打开远程录屏" : "打开本地录屏"}</button> : null}
+                <p>{session.remoteArtifacts ? (recordingAvailability === "available" ? t("diagnosisRecordingOnProvider", { provider: providerName(session.remoteArtifacts.provider) }) : t("diagnosisRemoteRecordingUnavailable")) : recordingAvailability === "available" ? t("diagnosisRecordingInDownloads") : recordingAvailability === "unknown" ? t("diagnosisRecordingUnknown") : t("diagnosisRecordingMissing")}</p>
+                {recordingAvailability === "available" && recordDirectory ? <button className="rl-button" onClick={() => void openCaptureRecording(recordDirectory)} type="button"><Video aria-hidden="true" size={16} />{session.remoteArtifacts ? t("diagnosisOpenRemoteRecording") : t("diagnosisOpenLocalRecording")}</button> : null}
               </div>
             ) : annotatedCapture ? (
-              <img alt={`页面截图，标注了 ${session.targets.length} 个目标元素`} src={annotatedCapture} />
+              <img alt={t("diagnosisShotAlt", { count: session.targets.length })} src={annotatedCapture} />
             ) : (
               <div className="capture-missing">
                 <ImageOff aria-hidden="true" size={28} />
-                <p>本次采集没有可用截图</p>
+                <p>{t("diagnosisNoScreenshot")}</p>
               </div>
             )}
           </div>
@@ -430,29 +476,29 @@ export function DiagnosisApp() {
               <span><Video aria-hidden="true" size={15} />{formatDuration(session.recording.durationMs)}</span>
               <span>{formatFileSize(session.recording.sizeBytes)}</span>
               <span>{session.recording.width} × {session.recording.height}</span>
-              <span>{session.recording.frameCount} 个关键帧</span>
+              <span>{t("diagnosisKeyframeCount", { count: session.recording.frameCount })}</span>
             </div>
           ) : null}
           {mediaMode === "recording" && keyframes.length ? (
-            <div className="keyframe-timeline" aria-label="录屏关键帧时间轴">
+            <div className="keyframe-timeline" aria-label={t("diagnosisKeyframeTimeline")}>
               <div className="keyframe-track" aria-hidden="true" />
               {keyframes.map((frame, index) => (
                 <button
-                  aria-label={`跳转到 ${formatDuration(frame.offsetMs)}${frame.label ? `，${frame.label}` : ""}`}
+                  aria-label={t("diagnosisSeek", { time: formatDuration(frame.offsetMs), label: frame.label ? t("diagnosisSeekLabel", { label: frameLabel(frame.label) }) : "" })}
                   className="keyframe-marker"
                   key={`${frame.offsetMs}-${index}`}
                   onClick={() => seekRecording(frame.offsetMs)}
                   style={{ left: `${Math.min(100, Math.max(0, frame.offsetMs / Math.max(1, session.recording?.durationMs ?? 1) * 100))}%` }}
-                  title={`${formatDuration(frame.offsetMs)}${frame.label ? ` · ${frame.label}` : ""}`}
+                  title={`${formatDuration(frame.offsetMs)}${frame.label ? ` · ${frameLabel(frame.label)}` : ""}`}
                   type="button"
                 />
               ))}
             </div>
           ) : null}
           <div className="capture-meta">
-            <span><Box aria-hidden="true" size={15} />{session.targets.length} 个目标元素</span>
-            <span><TerminalSquare aria-hidden="true" size={15} />{session.console.length} 条控制台记录</span>
-            <span><Network aria-hidden="true" size={15} />{session.network.length} 条网络记录</span>
+            <span><Box aria-hidden="true" size={15} />{t("diagnosisTargetCount", { count: session.targets.length })}</span>
+            <span><TerminalSquare aria-hidden="true" size={15} />{t("diagnosisConsoleCount", { count: session.console.length })}</span>
+            <span><Network aria-hidden="true" size={15} />{t("diagnosisNetworkCount", { count: session.network.length })}</span>
           </div>
           {session.targets.length ? (
             <ol className="target-legend">
@@ -469,8 +515,8 @@ export function DiagnosisApp() {
           ) : null}
         </section>
 
-        <section aria-label="采集证据" className="inspector-pane">
-          <div aria-label="采集信息分类" className="tab-list" role="tablist">
+        <section aria-label={t("diagnosisEvidence")} className="inspector-pane">
+          <div aria-label={t("diagnosisTabs")} className="tab-list" role="tablist">
             {TABS.map(({ id, icon: Icon, label }) => (
               <button
                 aria-controls={`panel-${id}`}
@@ -489,7 +535,7 @@ export function DiagnosisApp() {
                 type="button"
               >
                 <Icon aria-hidden="true" size={16} />
-                {label}
+                {t(label)}
                 <TabCount id={id} session={session} />
               </button>
             ))}
@@ -511,9 +557,9 @@ export function DiagnosisApp() {
 
 function CompletenessBadge({ level, score }: { level: string; score: number }) {
   return (
-    <div aria-label={`采集完整度 ${score}%，${level}`} className="completeness-badge">
+    <div aria-label={t("diagnosisCompleteness", { score, level })} className="completeness-badge">
       <Gauge aria-hidden="true" size={17} />
-      <span>完整度</span>
+      <span>{t("diagnosisCompletenessShort")}</span>
       <span className="rl-mono">{score}%</span>
     </div>
   )
@@ -536,40 +582,40 @@ function IssuePanel({ completeness, issue, onChange, remote, saved }: {
 }) {
   return (
     <div className="panel-stack">
-      <PanelIntro eyebrow="采集目标" title="描述可复现的问题">
-        这些内容会放在 AI 上下文最前面。页面证据不能替代清晰的问题现象和期望结果。
+      <PanelIntro eyebrow={t("diagnosisIssueEyebrow")} title={t("diagnosisIssueTitle")}>
+        {t("diagnosisIssueIntro")}
       </PanelIntro>
       <div className="form-grid">
         <label className="field-label">
-          <span>问题现象 <span aria-hidden="true" className="required-mark">*</span></span>
-          <textarea className="rl-field" maxLength={2000} onChange={(event) => onChange("description", event.target.value)} placeholder="例如：点击保存后页面没有反馈，控制台出现 TypeError。" value={issue.description} />
-          <span className="field-meta"><span>{saved ? (remote ? "已同步到 COS" : "已保存到本地") : (remote ? "正在同步到 COS…" : "正在保存…")}</span><span>{issue.description.length}/2000</span></span>
+          <span>{t("diagnosisSymptom")} <span aria-hidden="true" className="required-mark">*</span></span>
+          <textarea className="rl-field" maxLength={2000} onChange={(event) => onChange("description", event.target.value)} placeholder={t("diagnosisSymptomPlaceholder")} value={issue.description} />
+          <span className="field-meta"><span>{saved ? (remote ? t("diagnosisSyncedRemote") : t("diagnosisSavedLocal")) : (remote ? t("diagnosisSyncingRemote") : t("diagnosisSaving"))}</span><span>{issue.description.length}/2000</span></span>
         </label>
         <label className="field-label">
-          <span>期望结果 <span aria-hidden="true" className="required-mark">*</span></span>
-          <textarea className="rl-field" maxLength={2000} onChange={(event) => onChange("expectedResult", event.target.value)} placeholder="例如：保存成功后更新列表，并显示成功提示。" value={issue.expectedResult} />
-          <span className="field-meta"><span>说明正确行为，不要预设根因</span><span>{issue.expectedResult.length}/2000</span></span>
+          <span>{t("diagnosisExpected")} <span aria-hidden="true" className="required-mark">*</span></span>
+          <textarea className="rl-field" maxLength={2000} onChange={(event) => onChange("expectedResult", event.target.value)} placeholder={t("diagnosisExpectedPlaceholder")} value={issue.expectedResult} />
+          <span className="field-meta"><span>{t("diagnosisExpectedHint")}</span><span>{issue.expectedResult.length}/2000</span></span>
         </label>
         <label className="field-label form-grid__wide">
-          <span>补充说明</span>
-          <textarea className="rl-field rl-field--compact" maxLength={4000} onChange={(event) => onChange("notes", event.target.value)} placeholder="复现频率、账号条件、最近改动或其他必要背景。" value={issue.notes} />
-          <span className="field-meta"><span>可选</span><span>{issue.notes.length}/4000</span></span>
+          <span>{t("diagnosisNotes")}</span>
+          <textarea className="rl-field rl-field--compact" maxLength={4000} onChange={(event) => onChange("notes", event.target.value)} placeholder={t("diagnosisNotesPlaceholder")} value={issue.notes} />
+          <span className="field-meta"><span>{t("commonOptional")}</span><span>{issue.notes.length}/4000</span></span>
         </label>
       </div>
       {completeness.missing.length ? (
-        <Notice title={`还可补充：${completeness.missing.join("、")}`} tone="warning">缺少这些内容不会阻止导出，但会降低外部 AI 定位效率。</Notice>
+        <Notice title={t("diagnosisMissingMore", { items: translateMissing(completeness.missing) })} tone="warning">{t("diagnosisMissingImpact")}</Notice>
       ) : (
-        <Notice title="本次证据已生成" tone="success">可以复制 AI 上下文或重新导出报告。</Notice>
+        <Notice title={t("diagnosisEvidenceReady")} tone="success">{t("diagnosisEvidenceReadyDetail")}</Notice>
       )}
     </div>
   )
 }
 
 function ElementsPanel({ targets }: { targets: SelectedTarget[] }) {
-  if (!targets.length) return <EmptyEvidence icon={Box} title="没有选择目标元素">报告仍可导出，但 AI 只能依赖页面、控制台和网络证据。</EmptyEvidence>
+  if (!targets.length) return <EmptyEvidence icon={Box} title={t("diagnosisNoTargets")}>{t("diagnosisNoTargetsDetail")}</EmptyEvidence>
   return (
     <div className="panel-stack">
-      <PanelIntro eyebrow="DOM 证据" title={`${targets.length} 个目标元素`}>元素编号与左侧标注截图一致。完整 props value 不会被采集。</PanelIntro>
+      <PanelIntro eyebrow={t("diagnosisDomEyebrow")} title={t("diagnosisDomTitle", { count: targets.length })}>{t("diagnosisDomIntro")}</PanelIntro>
       <div className="evidence-list">
         {targets.map((target, index) => <TargetEvidence index={index} key={target.id} target={target} />)}
       </div>
@@ -591,36 +637,36 @@ function TargetEvidence({ index, target }: { index: number; target: SelectedTarg
       <div className="evidence-body">
         {target.annotation ? (
           <DefinitionGrid items={[
-            ["实际表现", target.annotation.actualResult],
-            ["期望结果", target.annotation.expectedResult],
+            [t("diagnosisActualResult"), target.annotation.actualResult],
+            [t("diagnosisExpected"), target.annotation.expectedResult],
           ]} />
         ) : null}
         <DefinitionGrid items={[
           ["Selector", target.selector],
           ["XPath", target.xpath],
-          ["祖先路径", target.ancestorPath],
-          ["位置", `${target.rect.x}, ${target.rect.y} · ${target.rect.width} × ${target.rect.height}`],
-          ["Role", target.role ?? "未设置"],
-          ["data-testid", target.testId ?? "未设置"],
+          [t("diagnosisAncestorPath"), target.ancestorPath],
+          [t("diagnosisPosition"), `${target.rect.x}, ${target.rect.y} · ${target.rect.width} × ${target.rect.height}`],
+          ["Role", target.role ?? t("commonNotSet")],
+          ["data-testid", target.testId ?? t("commonNotSet")],
         ]} />
-        <EvidenceBlock title="DOM 摘要" value={target.dom} />
-        <EvidenceBlock title="关键计算样式" value={JSON.stringify(target.computedStyle, null, 2)} />
-        {target.beforeStyle ? <EvidenceBlock title="::before 样式" value={JSON.stringify(target.beforeStyle, null, 2)} /> : null}
-        {target.afterStyle ? <EvidenceBlock title="::after 样式" value={JSON.stringify(target.afterStyle, null, 2)} /> : null}
+        <EvidenceBlock title={t("diagnosisDomSummary")} value={target.dom} />
+        <EvidenceBlock title={t("diagnosisComputedStyle")} value={JSON.stringify(target.computedStyle, null, 2)} />
+        {target.beforeStyle ? <EvidenceBlock title={t("diagnosisBeforeStyle")} value={JSON.stringify(target.beforeStyle, null, 2)} /> : null}
+        {target.afterStyle ? <EvidenceBlock title={t("diagnosisAfterStyle")} value={JSON.stringify(target.afterStyle, null, 2)} /> : null}
         <div className="subsection">
-          <h3>React 运行提示</h3>
+          <h3>{t("diagnosisReactHint")}</h3>
           {target.react?.available ? (
             <DefinitionGrid items={[
-              ["组件链", target.react.componentChain.join(" > ") || "未识别组件名称"],
-              ["Props Keys", target.react.propsKeys.join(", ") || "无"],
+              [t("diagnosisComponentChain"), target.react.componentChain.join(" > ") || t("diagnosisComponentUnknown")],
+              ["Props Keys", target.react.propsKeys.join(", ") || t("diagnosisPropsNone")],
             ]} />
-          ) : <p className="rl-muted m-0">{target.react?.boundary ?? "没有可用的 React 元数据。"}</p>}
+          ) : <p className="rl-muted m-0">{target.react?.boundary ? localizeKnownCopy(target.react.boundary) : t("diagnosisNoReact")}</p>}
         </div>
         <div className="subsection">
-          <h3>匹配 CSS 规则</h3>
+          <h3>{t("diagnosisCssRules")}</h3>
           {target.cssRules.length ? target.cssRules.map((rule, ruleIndex) => (
             <EvidenceBlock key={`${rule.selector}-${ruleIndex}`} title={`${rule.selector}${rule.styleSheetUrl ? ` · ${rule.styleSheetUrl}` : ""}`} value={rule.cssText} />
-          )) : <p className="rl-muted m-0">未读取到可访问的同源匹配规则。</p>}
+          )) : <p className="rl-muted m-0">{t("diagnosisNoCss")}</p>}
         </div>
       </div>
     </details>
@@ -633,14 +679,14 @@ function ConsolePanel({ events }: { events: ConsoleEvidence[] }) {
   const filtered = events.filter((item) => (level === "all" || item.level === level) && `${item.message} ${item.stack ?? ""}`.toLowerCase().includes(query.toLowerCase()))
   return (
     <div className="panel-stack">
-      <PanelIntro eyebrow="Console" title={`${events.length} 条采集记录`}>仅包含采集启动后的日志、页面错误和未处理 Promise rejection。</PanelIntro>
+      <PanelIntro eyebrow="Console" title={t("diagnosisConsoleTitle", { count: events.length })}>{t("diagnosisConsoleIntro")}</PanelIntro>
       <EvidenceFilters query={query} setQuery={setQuery}>
-        <SegmentedControl label="日志级别" onChange={(value) => setLevel(value as typeof level)} options={[
-          ["all", "全部"], ["error", "错误"], ["warn", "警告"], ["info", "信息"],
+        <SegmentedControl label={t("diagnosisLogLevel")} onChange={(value) => setLevel(value as typeof level)} options={[
+          ["all", t("diagnosisAll")], ["error", t("diagnosisLevelError")], ["warn", t("diagnosisLevelWarn")], ["info", t("diagnosisLevelInfo")],
         ]} value={level} />
       </EvidenceFilters>
       {filtered.length ? <div className="evidence-list">{filtered.map((item) => <ConsoleItem item={item} key={item.id} />)}</div>
-        : <EmptyEvidence icon={TerminalSquare} title="没有匹配的控制台记录">调整筛选条件后重试。</EmptyEvidence>}
+        : <EmptyEvidence icon={TerminalSquare} title={t("diagnosisNoConsole")}>{t("diagnosisAdjustFilters")}</EmptyEvidence>}
     </div>
   )
 }
@@ -654,9 +700,9 @@ function ConsoleItem({ item }: { item: ConsoleEvidence }) {
         <ChevronDown aria-hidden="true" className="details-chevron" size={17} />
       </summary>
       <div className="evidence-body">
-        <EvidenceBlock title="消息" value={item.message} />
-        {item.stack ? <EvidenceBlock title="堆栈" value={item.stack} /> : null}
-        {item.truncated ? <p className="truncated-note">该记录已按 4 KB 上限截断。</p> : null}
+        <EvidenceBlock title={t("diagnosisMessage")} value={item.message} />
+        {item.stack ? <EvidenceBlock title={t("diagnosisStack")} value={item.stack} /> : null}
+        {item.truncated ? <p className="truncated-note">{t("diagnosisTruncated4k")}</p> : null}
       </div>
     </details>
   )
@@ -668,14 +714,14 @@ function NetworkPanel({ events }: { events: NetworkEvidence[] }) {
   const filtered = events.filter((item) => (type === "all" || item.type === type) && `${item.method} ${item.url} ${item.status ?? ""}`.toLowerCase().includes(query.toLowerCase()))
   return (
     <div className="panel-stack">
-      <PanelIntro eyebrow="Network" title={`${events.length} 条请求与资源`}>fetch、XHR 包含脱敏预览；其他资源来自 Resource Timing。</PanelIntro>
+      <PanelIntro eyebrow="Network" title={t("diagnosisNetworkTitle", { count: events.length })}>{t("diagnosisNetworkIntro")}</PanelIntro>
       <EvidenceFilters query={query} setQuery={setQuery}>
-        <SegmentedControl label="请求类型" onChange={(value) => setType(value as typeof type)} options={[
-          ["all", "全部"], ["fetch", "Fetch"], ["xhr", "XHR"], ["resource", "资源"],
+        <SegmentedControl label={t("diagnosisRequestType")} onChange={(value) => setType(value as typeof type)} options={[
+          ["all", t("diagnosisAll")], ["fetch", "Fetch"], ["xhr", "XHR"], ["resource", t("diagnosisResource")],
         ]} value={type} />
       </EvidenceFilters>
       {filtered.length ? <div className="evidence-list">{filtered.map((item) => <NetworkItem item={item} key={item.id} />)}</div>
-        : <EmptyEvidence icon={Network} title="没有匹配的网络记录">调整筛选条件后重试。</EmptyEvidence>}
+        : <EmptyEvidence icon={Network} title={t("diagnosisNoNetwork")}>{t("diagnosisAdjustFilters")}</EmptyEvidence>}
     </div>
   )
 }
@@ -693,11 +739,11 @@ function NetworkItem({ item }: { item: NetworkEvidence }) {
       </summary>
       <div className="evidence-body">
         {item.error ? <Notice title={item.error} tone="error" /> : null}
-        {item.requestHeaders ? <EvidenceBlock title="请求 Headers" value={JSON.stringify(item.requestHeaders, null, 2)} /> : null}
-        {item.requestBody ? <EvidenceBlock title={`请求体${item.requestBodyTruncated ? " · 已截断" : ""}`} value={item.requestBody} /> : null}
-        {item.responseHeaders ? <EvidenceBlock title="响应 Headers" value={JSON.stringify(item.responseHeaders, null, 2)} /> : null}
-        {item.responseBody ? <EvidenceBlock title={`响应体${item.responseBodyTruncated ? " · 已截断" : ""}`} value={item.responseBody} /> : null}
-        {!item.requestBody && !item.responseBody && !item.requestHeaders && !item.responseHeaders ? <p className="rl-muted m-0">该 Resource Timing 记录不包含请求和响应正文。</p> : null}
+        {item.requestHeaders ? <EvidenceBlock title={t("diagnosisRequestHeaders")} value={JSON.stringify(item.requestHeaders, null, 2)} /> : null}
+        {item.requestBody ? <EvidenceBlock title={t("diagnosisRequestBody", { suffix: item.requestBodyTruncated ? t("diagnosisTruncatedSuffix") : "" })} value={item.requestBody} /> : null}
+        {item.responseHeaders ? <EvidenceBlock title={t("diagnosisResponseHeaders")} value={JSON.stringify(item.responseHeaders, null, 2)} /> : null}
+        {item.responseBody ? <EvidenceBlock title={t("diagnosisResponseBody", { suffix: item.responseBodyTruncated ? t("diagnosisTruncatedSuffix") : "" })} value={item.responseBody} /> : null}
+        {!item.requestBody && !item.responseBody && !item.requestHeaders && !item.responseHeaders ? <p className="rl-muted m-0">{t("diagnosisNoBody")}</p> : null}
       </div>
     </details>
   )
@@ -706,26 +752,26 @@ function NetworkItem({ item }: { item: NetworkEvidence }) {
 function EnvironmentPanel({ session }: { session: RootlineSession }) {
   return (
     <div className="panel-stack">
-      <PanelIntro eyebrow="Environment" title="页面与采集边界">Rootline 不申请 Cookie、webRequest、debugger 或全站访问权限。</PanelIntro>
+      <PanelIntro eyebrow={t("diagnosisEnvEyebrow")} title={t("diagnosisEnvTitle")}>{t("diagnosisEnvIntro")}</PanelIntro>
       <section className="environment-section">
-        <h3><Globe2 aria-hidden="true" size={17} />页面</h3>
+        <h3><Globe2 aria-hidden="true" size={17} />{t("diagnosisPage")}</h3>
         <DefinitionGrid items={[
-          ["地址", session.page.url], ["标题", session.page.title], ["Origin", session.page.origin],
-          ["Viewport", `${session.page.viewport.width} × ${session.page.viewport.height}`],
-          ["DPR", String(session.page.viewport.devicePixelRatio)], ["语言", session.page.language || "未知"],
-          ["采集开始", displayTime(session.startedAt)], ["截图时间", session.screenshot.capturedAt ? displayTime(session.screenshot.capturedAt) : "未截图"],
+          [t("diagnosisUrl"), session.page.url], [t("diagnosisPageTitle"), session.page.title], ["Origin", session.page.origin],
+          [t("diagnosisViewport"), `${session.page.viewport.width} × ${session.page.viewport.height}`],
+          ["DPR", String(session.page.viewport.devicePixelRatio)], [t("diagnosisLanguage"), session.page.language || t("commonUnknown")],
+          [t("diagnosisStarted"), displayTime(session.startedAt)], [t("diagnosisCapturedAt"), session.screenshot.capturedAt ? displayTime(session.screenshot.capturedAt) : t("diagnosisNotCaptured")],
         ]} />
       </section>
       <section className="environment-section">
-        <h3><Monitor aria-hidden="true" size={17} />浏览器</h3>
+        <h3><Monitor aria-hidden="true" size={17} />{t("diagnosisBrowser")}</h3>
         <p className="user-agent rl-mono">{session.page.userAgent}</p>
       </section>
       <section className="environment-section">
-        <h3><ShieldCheck aria-hidden="true" size={17} />证据缺口</h3>
+        <h3><ShieldCheck aria-hidden="true" size={17} />{t("diagnosisGaps")}</h3>
         <ul className="boundary-list">
-          {session.boundaries.map((boundary) => <li key={`${boundary.code}-${boundary.message}`}>{boundary.message}</li>)}
-          <li>控制台丢弃 {session.limits.consoleDropped} 条，网络丢弃 {session.limits.networkDropped} 条。</li>
-          <li>未采集 Cookie、LocalStorage、SessionStorage、密码字段、完整页面 HTML 和浏览历史。</li>
+          {session.boundaries.map((boundary) => <li key={`${boundary.code}-${boundary.message}`}>{boundaryText(boundary)}</li>)}
+          <li>{t("diagnosisDropped", { console: session.limits.consoleDropped, network: session.limits.networkDropped })}</li>
+          <li>{t("diagnosisNotCollected")}</li>
         </ul>
       </section>
     </div>
@@ -736,28 +782,28 @@ function AiPanel({ location, remoteLocation, markdown, onCopy }: { location: Loc
   const [view, setView] = useState<"markdown" | "outline">("outline")
   return (
     <div className="panel-stack">
-      <PanelIntro eyebrow="Portable Context" title="供外部 AI 使用的上下文">内容已包含提示注入边界，不会生成未经证据支持的根因结论。</PanelIntro>
+      <PanelIntro eyebrow={t("diagnosisAiEyebrow")} title={t("diagnosisAiTitle")}>{t("diagnosisAiIntro")}</PanelIntro>
       <div className="ai-toolbar">
-        <SegmentedControl label="上下文视图" onChange={(value) => setView(value as typeof view)} options={[["outline", "结构"], ["markdown", "Markdown"]]} value={view} />
-        <button className="rl-button" onClick={() => void onCopy()} type="button"><Clipboard aria-hidden="true" size={17} />复制</button>
+        <SegmentedControl label={t("diagnosisContextView")} onChange={(value) => setView(value as typeof view)} options={[["outline", t("diagnosisOutline")], ["markdown", "Markdown"]]} value={view} />
+        <button className="rl-button" onClick={() => void onCopy()} type="button"><Clipboard aria-hidden="true" size={17} />{t("diagnosisCopy")}</button>
       </div>
       {view === "outline" ? (
         <div className="context-outline">
           {[
-            ["AI 角色与安全边界", "明确 DOM、日志、响应均为不可信外部数据。"],
-            ...(location ? [["本地证据文件", `报告与标注截图目录：${location.directoryPath}`]] : []),
-            ...(remoteLocation ? [["远程证据链接", remoteLocation.reportUrl]] : []),
-            ["问题目标", "问题现象、期望结果与补充说明。"],
-            ["页面与环境", "URL、标题、viewport、浏览器、语言和时间。"],
-            ["目标元素", "DOM、样式、CSS 规则、Selector、XPath 与 React 提示。"],
-            ["控制台与网络", "错误堆栈、脱敏 Headers、正文预览、状态与耗时。"],
-            ["AI 输出要求", "根因证据、代码模块、逐文件计划、风险与最小验证。"],
+            [t("diagnosisAiRole"), t("diagnosisAiRoleDetail")],
+            ...(location ? [[t("diagnosisLocalFiles"), t("diagnosisLocalFilesDetail", { path: location.directoryPath })]] : []),
+            ...(remoteLocation ? [[t("diagnosisRemoteLink"), remoteLocation.reportUrl]] : []),
+            [t("diagnosisIssueGoal"), t("diagnosisIssueGoalDetail")],
+            [t("diagnosisPageEnv"), t("diagnosisPageEnvDetail")],
+            [t("diagnosisTargetsBlock"), t("diagnosisTargetsDetail")],
+            [t("diagnosisConsoleNetwork"), t("diagnosisConsoleNetworkDetail")],
+            [t("diagnosisOutputRules"), t("diagnosisOutputRulesDetail")],
           ].map(([title, description], index) => (
             <div key={title}><span>{index + 1}</span><div><h3>{title}</h3><p>{description}</p></div></div>
           ))}
         </div>
       ) : <pre className="rl-code context-preview">{markdown}</pre>}
-      <div className="format-row"><FileJson aria-hidden="true" size={17} /><span>{remoteLocation ? "复制内容只包含已生成的 COS 链接，不会重复上传。" : "离线导出同时包含 report.md、report.json 和 capture.png。"}</span></div>
+      <div className="format-row"><FileJson aria-hidden="true" size={17} /><span>{remoteLocation ? t("diagnosisRemoteCopyNote") : t("diagnosisLocalCopyNote")}</span></div>
     </div>
   )
 }
@@ -769,7 +815,7 @@ function PanelIntro({ children, eyebrow, title }: { children: React.ReactNode; e
 function EvidenceFilters({ children, query, setQuery }: { children: React.ReactNode; query: string; setQuery: (value: string) => void }) {
   return (
     <div className="evidence-filters">
-      <label className="search-field"><Search aria-hidden="true" size={16} /><span className="sr-only">搜索证据</span><input onChange={(event) => setQuery(event.target.value)} placeholder="搜索 URL、状态或消息" type="search" value={query} /></label>
+      <label className="search-field"><Search aria-hidden="true" size={16} /><span className="sr-only">{t("diagnosisSearchEvidence")}</span><input onChange={(event) => setQuery(event.target.value)} placeholder={t("diagnosisSearchPlaceholder")} type="search" value={query} /></label>
       {children}
     </div>
   )
@@ -796,7 +842,7 @@ function EvidenceBlock({ title, value }: { title: string; value: string }) {
   }
   return (
     <section className="evidence-block">
-      <div><h3>{title}</h3><button aria-label={`复制${title}`} onClick={copy} title={`复制${title}`} type="button">{copied ? <Check aria-hidden="true" size={15} /> : <Clipboard aria-hidden="true" size={15} />}</button></div>
+      <div><h3>{title}</h3><button aria-label={t("diagnosisCopyTitle", { title })} onClick={copy} title={t("diagnosisCopyTitle", { title })} type="button">{copied ? <Check aria-hidden="true" size={15} /> : <Clipboard aria-hidden="true" size={15} />}</button></div>
       <pre className="rl-code">{value}</pre>
     </section>
   )

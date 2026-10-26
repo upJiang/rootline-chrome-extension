@@ -1,3 +1,4 @@
+import { t } from "./i18n"
 import {
   deleteRecordingResult,
   saveRecordingResult,
@@ -55,8 +56,8 @@ export async function handleOffscreenRecordingMessage(message: RecordingControlM
 }
 
 async function startRecording(sessionId: string, _maxDurationMs: number): Promise<{ resultId: string; startedAt: number }> {
-  if (active) throw new Error("已有 Rootline 录屏正在进行，请先停止当前录制。")
-  if (!navigator.mediaDevices?.getDisplayMedia) throw new Error("当前浏览器不支持整屏录制。")
+  if (active) throw new Error(t("errorRecordingAlreadyActive"))
+  if (!navigator.mediaDevices?.getDisplayMedia) throw new Error(t("errorDisplayMediaUnsupported"))
 
   const stream = await navigator.mediaDevices.getDisplayMedia({
     audio: false,
@@ -66,7 +67,7 @@ async function startRecording(sessionId: string, _maxDurationMs: number): Promis
   const videoTrack = stream.getVideoTracks()[0]
   if (!videoTrack) {
     stopTracks(stream)
-    throw new Error("没有获得可用的屏幕视频流。")
+    throw new Error(t("errorNoVideoTrack"))
   }
 
   const video = document.createElement("video")
@@ -86,7 +87,7 @@ async function startRecording(sessionId: string, _maxDurationMs: number): Promis
     canvas.width = FRAME_WIDTH
     canvas.height = FRAME_HEIGHT
     const context = canvas.getContext("2d")
-    if (!context) throw new Error("无法初始化录制画布。")
+    if (!context) throw new Error(t("errorRecordingCanvasFailed"))
     context.fillStyle = "#111827"
     context.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
     const canvasStream = canvas.captureStream(RECORDING_FPS)
@@ -125,7 +126,7 @@ async function startRecording(sessionId: string, _maxDurationMs: number): Promis
       void stopRecording(sessionId, false, "sharing-ended").then((result) => {
         void chrome.runtime.sendMessage({ type: "ROOTLINE_OFFSCREEN_RECORDING_ENDED", sessionId, recording: result.recording })
       }).catch((error: unknown) => {
-        void chrome.runtime.sendMessage({ type: "ROOTLINE_OFFSCREEN_RECORDING_ENDED", sessionId, error: error instanceof Error ? error.message : "录屏已停止但结果未能保存。" })
+        void chrome.runtime.sendMessage({ type: "ROOTLINE_OFFSCREEN_RECORDING_ENDED", sessionId, error: error instanceof Error ? error.message : t("errorRecordingResultUnsaved") })
       })
     }, { once: true })
     return { resultId: current.resultId, startedAt: current.startedAt }
@@ -195,7 +196,7 @@ async function flushFinalRecordingTail(current: ActiveRecording): Promise<void> 
   }
   if (active === current) {
     drawCurrentFrame(current)
-    captureFrame(current, "stop", "录屏结束")
+    captureFrame(current, "stop", t("recordingFrameEnded"))
   }
 }
 
@@ -311,9 +312,9 @@ function stopTracks(stream: MediaStream): void {
 function waitForLoadedMetadata(video: HTMLVideoElement): Promise<void> {
   if (video.readyState >= HTMLMediaElement.HAVE_METADATA) return Promise.resolve()
   return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(() => reject(new Error("等待屏幕视频元数据超时。")), 4_000)
+    const timeout = window.setTimeout(() => reject(new Error(t("errorScreenMetadataTimeout"))), 4_000)
     video.addEventListener("loadedmetadata", () => { window.clearTimeout(timeout); resolve() }, { once: true })
-    video.addEventListener("error", () => { window.clearTimeout(timeout); reject(new Error("无法读取屏幕视频流。")) }, { once: true })
+    video.addEventListener("error", () => { window.clearTimeout(timeout); reject(new Error(t("errorScreenStreamUnreadable"))) }, { once: true })
   })
 }
 

@@ -1,7 +1,9 @@
+import { t } from "./i18n"
+
 let createPromise: Promise<void> | null = null
 
 export async function ensureRootlineOffscreenDocument(): Promise<void> {
-  if (!("offscreen" in chrome)) throw new Error("当前 Chrome 版本不支持后台录制和本地文件生成。")
+  if (!("offscreen" in chrome)) throw new Error(t("errorOffscreenUnsupported"))
   if (await chrome.offscreen.hasDocument()) return
   if (!createPromise) {
     createPromise = chrome.offscreen.createDocument({

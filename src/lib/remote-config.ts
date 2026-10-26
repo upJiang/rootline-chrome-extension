@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { isMessageKey, providerName, t } from "./i18n"
 import type { AliyunOssConfig, CaptureSaveMode, RemoteProvider, TencentCosConfig } from "./types"
 
 const STORAGE_KEY = "rootline:capture-save-config"
@@ -14,34 +15,41 @@ export interface CaptureSaveConfig {
 
 const configSchema = z.object({
   provider: z.literal("tencent-cos"),
-  bucket: z.string().trim().min(3).max(63).regex(/^[a-z0-9][a-z0-9-]*-[0-9]+$/, "Bucket 应为名称-APPID，例如 rootline-1250000000。"),
-  region: z.string().trim().min(3).max(32).regex(/^[a-z0-9-]+$/, "Region 格式不正确，例如 ap-guangzhou。"),
-  secretId: z.string().trim().min(8, "请输入有效的 SecretId。"),
-  secretKey: z.string().trim().min(8, "请输入有效的 SecretKey。"),
+  bucket: z.string().trim().min(3).max(63).regex(/^[a-z0-9][a-z0-9-]*-[0-9]+$/, "settingsBucketTencent"),
+  region: z.string().trim().min(3).max(32).regex(/^[a-z0-9-]+$/, "settingsRegionTencent"),
+  secretId: z.string().trim().min(8, "settingsSecretIdInvalid"),
+  secretKey: z.string().trim().min(8, "settingsSecretKeyInvalid"),
   objectPrefix: z.string().trim().min(1).max(128),
-  publicBaseUrl: z.string().trim().url("自定义访问域名必须是完整的 HTTPS 地址。").optional(),
+  publicBaseUrl: z.string().trim().url("settingsPublicUrlInvalid").optional(),
   configuredAt: z.string(),
   verifiedAt: z.string().optional(),
 })
 
 const aliyunConfigSchema = z.object({
   provider: z.literal("aliyun-oss"),
-  bucket: z.string().trim().min(3).max(63).regex(/^[a-z0-9][a-z0-9-]*$/, "Bucket 格式不正确。"),
-  region: z.string().trim().min(3).max(64).regex(/^[a-z0-9-]+$/, "Region 格式不正确，例如 cn-guangzhou。"),
-  accessKeyId: z.string().trim().min(8, "请输入有效的 AccessKey ID。"),
-  accessKeySecret: z.string().trim().min(8, "请输入有效的 AccessKey Secret。"),
+  bucket: z.string().trim().min(3).max(63).regex(/^[a-z0-9][a-z0-9-]*$/, "settingsBucketAliyun"),
+  region: z.string().trim().min(3).max(64).regex(/^[a-z0-9-]+$/, "settingsRegionAliyun"),
+  accessKeyId: z.string().trim().min(8, "settingsAccessKeyIdInvalid"),
+  accessKeySecret: z.string().trim().min(8, "settingsAccessKeySecretInvalid"),
   objectPrefix: z.string().trim().min(1).max(128),
-  publicBaseUrl: z.string().trim().url("自定义访问域名必须是完整的 HTTPS 地址。").optional(),
+  publicBaseUrl: z.string().trim().url("settingsPublicUrlInvalid").optional(),
   configuredAt: z.string(),
   verifiedAt: z.string().optional(),
 })
+
+function parseLocalized<T>(schema: z.ZodType<T>, value: unknown): T {
+  const parsed = schema.safeParse(value)
+  if (parsed.success) return parsed.data
+  const message = parsed.error.issues[0]?.message
+  throw new Error(message && isMessageKey(message) ? t(message) : message || t("commonOperationFailed"))
+}
 
 function normalizePrefix(value: string): string {
   const normalized = value.trim().replaceAll("\\", "/").replace(/^\/+|\/+$/g, "")
   if (!normalized) return "rootline/"
   const segments = normalized.split("/")
   if (segments.some((segment) => !segment || segment === "." || segment === "..")) {
-    throw new Error("对象前缀包含无效目录段。")
+    throw new Error(t("errorObjectPrefixSegment"))
   }
   return `${normalized}/`
 }
@@ -50,7 +58,7 @@ function normalizeBaseUrl(value?: string): string | undefined {
   const normalized = value?.trim().replace(/\/+$/, "")
   if (!normalized) return undefined
   const url = new URL(normalized)
-  if (url.protocol !== "https:") throw new Error("自定义访问域名必须使用 HTTPS。")
+  if (url.protocol !== "https:") throw new Error(t("errorCustomDomainHttps"))
   return url.toString().replace(/\/$/, "")
 }
 
@@ -69,8 +77,7 @@ export function normalizeTencentCosConfig(
     configuredAt: value.configuredAt ?? new Date().toISOString(),
     ...(value.verifiedAt ? { verifiedAt: value.verifiedAt } : {}),
   }
-  const parsed = configSchema.parse(candidate)
-  return parsed as TencentCosConfig
+  return parseLocalized(configSchema, candidate) as TencentCosConfig
 }
 
 export function normalizeAliyunOssConfig(
@@ -88,7 +95,7 @@ export function normalizeAliyunOssConfig(
     configuredAt: value.configuredAt ?? new Date().toISOString(),
     ...(value.verifiedAt ? { verifiedAt: value.verifiedAt } : {}),
   }
-  return aliyunConfigSchema.parse(candidate) as AliyunOssConfig
+  return parseLocalized(aliyunConfigSchema, candidate) as AliyunOssConfig
 }
 
 export async function readCaptureSaveConfig(): Promise<CaptureSaveConfig> {
@@ -129,7 +136,7 @@ export async function saveAliyunOssConfig(config: AliyunOssConfig): Promise<Capt
 
 export async function setCaptureSaveMode(mode: CaptureSaveMode): Promise<CaptureSaveConfig> {
   const current = await readCaptureSaveConfig()
-  if (mode === "remote" && !(current.provider === "aliyun-oss" ? current.aliyunOss : current.tencentCos)) throw new Error(`请先配置${current.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。`)
+  if (mode === "remote" && !(current.provider === "aliyun-oss" ? current.aliyunOss : current.tencentCos)) throw new Error(t("errorConfigureProvider", { provider: providerName(current.provider) }))
   const next: CaptureSaveConfig = { ...current, mode }
   await chrome.storage.local.set({ [STORAGE_KEY]: next })
   return next

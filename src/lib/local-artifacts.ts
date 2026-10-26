@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { t } from "./i18n"
 import {
   listStoredCaptureRecords,
   readStoredCaptureRecord,
@@ -210,7 +211,7 @@ export interface CaptureRecord {
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, encoded] = dataUrl.split(",", 2)
-  if (!header || !encoded || !header.includes(";base64")) throw new Error("标注截图格式无效。")
+  if (!header || !encoded || !header.includes(";base64")) throw new Error(t("errorScreenshotFormat"))
   const mime = /^data:([^;]+)/.exec(header)?.[1] ?? "image/png"
   const binary = atob(encoded)
   const bytes = new Uint8Array(binary.length)
@@ -228,7 +229,7 @@ function captureDirectoryName(session: Pick<RootlineSession, "id" | "startedAt">
 
 async function saveHistory(report: RootlineReportV1, captureDataUrl: string): Promise<void> {
   const directoryName = report.localArtifacts?.directoryName
-  if (!directoryName) throw new Error("采集报告缺少本地目录信息。")
+  if (!directoryName) throw new Error(t("errorReportDirectoryMissing"))
   const existing = await readStoredCaptureRecord(directoryName)
   await saveStoredCaptureRecord({
     directoryName,
@@ -243,9 +244,9 @@ async function writeDownloadedArtifacts(
   session: RootlineSession,
 ): Promise<{ report: RootlineReportV1; location: LocalArtifactLocation }> {
   const captureDataUrl = await renderAnnotatedCapture(session)
-  if (!captureDataUrl) throw new Error("没有可写入的页面截图。")
+  if (!captureDataUrl) throw new Error(t("errorScreenshotMissing"))
   const recordingResult = session.recording ? await readRecordingResult(session.recording.resultId) : null
-  if (session.recording && !recordingResult) throw new Error("录屏临时结果已经丢失，无法写入 capture.webm。")
+  if (session.recording && !recordingResult) throw new Error(t("errorRecordingTempLostLocal"))
 
   const directoryName = captureDirectoryName(session)
   const relativeDirectory = `${DOWNLOAD_ROOT_DIRECTORY}/${directoryName}`
@@ -349,7 +350,7 @@ async function recordFromStored(stored: StoredCaptureRecord): Promise<CaptureRec
   const report = rootlineReportSchema.parse(stored.report) as RootlineReportV1
   const location = report.localArtifacts
   const remoteLocation = report.remoteArtifacts
-  if (!location && !remoteLocation) throw new Error("采集记录缺少文件位置信息。")
+  if (!location && !remoteLocation) throw new Error(t("errorRecordLocationMissing"))
   const captureFile = stored.captureDataUrl ? dataUrlToFile(stored.captureDataUrl, "capture.png") : null
   if (remoteLocation) {
     const [reportState, recordingState] = await Promise.all([
@@ -369,7 +370,7 @@ async function recordFromStored(stored: StoredCaptureRecord): Promise<CaptureRec
       jsonState: "missing",
     }
   }
-  if (!location) throw new Error("采集记录缺少本地文件位置。")
+  if (!location) throw new Error(t("errorLocalLocationMissing"))
   const ids = location.downloadIds
   const [captureState, recordingState, markdownState, jsonState] = await Promise.all([
     downloadAvailability(ids?.capture),
@@ -394,7 +395,7 @@ async function recordFromStored(stored: StoredCaptureRecord): Promise<CaptureRec
 export async function readCaptureRecord(directoryName: string): Promise<CaptureRecord> {
   const stored = await readStoredCaptureRecord(directoryName)
   if (stored) return recordFromStored(stored)
-  throw new Error("采集记录不存在或本地索引已经被清理。")
+  throw new Error(t("errorRecordGone"))
 }
 
 export async function listCaptureHistory(): Promise<CaptureHistoryItem[]> {
@@ -428,7 +429,7 @@ export async function listCaptureHistory(): Promise<CaptureHistoryItem[]> {
         recordingState: "missing",
         markdownState: "missing",
         jsonState: "missing",
-        error: error instanceof Error ? error.message : "无法读取采集记录。",
+        error: error instanceof Error ? error.message : t("diagnosisReadFailed"),
       }
     }
   }))
@@ -444,7 +445,7 @@ function fallbackRelativeDirectory(directoryName: string): string {
 }
 
 async function rewriteDownloadedRecord(record: CaptureRecord, report: RootlineReportV1): Promise<CaptureRecord> {
-  if (!record.location) throw new Error("采集记录缺少本地文件位置。")
+  if (!record.location) throw new Error(t("errorLocalLocationMissing"))
   const relativeDirectory = record.location.downloadRelativeDirectory ?? fallbackRelativeDirectory(record.location.directoryName)
   const markdown = await requestArtifactDownloadBlob(
     `${relativeDirectory}/report.md`,
@@ -481,7 +482,7 @@ async function rewriteDownloadedRecord(record: CaptureRecord, report: RootlineRe
 
 async function rewriteRecord(directoryName: string, issue?: RootlineIssue): Promise<CaptureRecord> {
   const record = await readCaptureRecord(directoryName)
-  if (!record.location) throw new Error("该记录是远程报告，请在远程保存配置中选择原来的云服务商后重新导出。")
+  if (!record.location) throw new Error(t("errorRemoteRecordNeedsProvider"))
   if (issue && record.report.issue.description === issue.description
     && record.report.issue.expectedResult === issue.expectedResult
     && record.report.issue.notes === issue.notes) {
@@ -511,7 +512,7 @@ export async function openCaptureRecording(directoryName: string): Promise<Artif
     try {
       await chrome.tabs.create({ url: record.remoteLocation.recordingUrl })
     } catch {
-      throw new Error("无法打开远程录屏：远程录屏链接可能已经失效，请检查云端文件后重试。")
+      throw new Error(t("errorRemoteRecordingOpenFailed"))
     }
     return "available"
   }
@@ -525,9 +526,9 @@ export async function openCaptureRecording(directoryName: string): Promise<Artif
     } catch (error) {
       const detail = error instanceof Error ? error.message.toLowerCase() : ""
       if (detail.includes("permission") || detail.includes("权限")) {
-        throw new Error("无法打开本地录屏：当前扩展缺少打开下载文件的权限，请重新加载最新版本后重试。")
+        throw new Error(t("errorLocalRecordingPermission"))
       }
-      throw new Error("无法打开本地录屏：Chrome 拒绝打开该下载文件，请确认文件仍存在后重试。")
+      throw new Error(t("errorLocalRecordingOpenFailed"))
     }
   }
   return state

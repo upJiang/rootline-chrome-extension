@@ -1,5 +1,6 @@
 /// <reference path="./aliyun-oss.d.ts" />
 import OSS from "ali-oss"
+import { t, type MessageKey } from "./i18n"
 import type { AliyunOssConfig } from "./types"
 
 export interface OssUploadProgress {
@@ -49,17 +50,17 @@ function ossClient(config: AliyunOssConfig): OSS {
   })
 }
 
-function friendlyOssError(error: unknown, fallback: string): Error {
+function friendlyOssError(error: unknown, fallback: MessageKey): Error {
   const value = error as { code?: string; status?: number; statusCode?: number; message?: string; requestId?: string }
   const diagnostic = typeof value?.requestId === "string" && /^[A-Za-z0-9._:/+=-]{1,160}$/.test(value.requestId)
-    ? `（requestId=${value.requestId}）`
+    ? t("errorDiagnostic", { detail: `requestId=${value.requestId}` })
     : ""
-  if (value?.code === "InvalidAccessKeyId") return new Error(`阿里云 OSS 不识别当前 AccessKey ID${diagnostic}，请确认密钥仍处于启用状态。`)
-  if (value?.code === "SignatureDoesNotMatch") return new Error(`阿里云 OSS 请求签名不匹配${diagnostic}，请检查 Region、Bucket 和本机系统时间。`)
-  if (value?.status === 403 || value?.statusCode === 403 || value?.code === "AccessDenied") return new Error(`阿里云 OSS 拒绝访问${diagnostic}，请检查 RAM 子用户是否拥有 rootline/* 的 PutObject、GetObject、HeadObject、DeleteObject 权限，以及 CORS 配置。`)
-  if (value?.status === 404 || value?.statusCode === 404 || value?.code === "NoSuchBucket") return new Error(`找不到阿里云 OSS Bucket${diagnostic}，请检查 Bucket 和 Region。`)
-  if (value?.message?.toLowerCase().includes("cors") || value?.message?.toLowerCase().includes("network")) return new Error("无法连接阿里云 OSS，请检查网络和 CORS 是否允许 PUT、GET、HEAD、DELETE、OPTIONS。")
-  return new Error(`${fallback}${diagnostic}`)
+  if (value?.code === "InvalidAccessKeyId") return new Error(t("errorOssInvalidAccessKey", { diagnostic }))
+  if (value?.code === "SignatureDoesNotMatch") return new Error(t("errorOssSignatureMismatch", { diagnostic }))
+  if (value?.status === 403 || value?.statusCode === 403 || value?.code === "AccessDenied") return new Error(t("errorOssAccessDenied", { diagnostic }))
+  if (value?.status === 404 || value?.statusCode === 404 || value?.code === "NoSuchBucket") return new Error(t("errorOssBucketMissing", { diagnostic }))
+  if (value?.message?.toLowerCase().includes("cors") || value?.message?.toLowerCase().includes("network")) return new Error(t("errorOssNetwork"))
+  return new Error(`${t(fallback)}${diagnostic}`)
 }
 
 export async function putOssObject(
@@ -80,7 +81,7 @@ export async function putOssObject(
     })
     options.onProgress?.({ loaded: body.size, total: body.size, percent: 1 })
   } catch (error) {
-    throw friendlyOssError(error, "阿里云 OSS 上传失败，请检查配置后重试。")
+    throw friendlyOssError(error, "errorOssUploadFailed")
   }
 }
 
@@ -88,7 +89,7 @@ export async function deleteOssObject(config: AliyunOssConfig, key: string): Pro
   try {
     await ossClient(config).delete(key)
   } catch (error) {
-    throw friendlyOssError(error, "阿里云 OSS 文件清理失败。")
+    throw friendlyOssError(error, "errorOssCleanupFailed")
   }
 }
 
@@ -100,9 +101,9 @@ export async function testAliyunOssConnection(config: AliyunOssConfig): Promise<
   try {
     await putOssObject(config, key, new Blob([content], { type: "text/plain;charset=utf-8" }), "text/plain;charset=utf-8")
     const response = await fetch(`${buildOssObjectUrl(config, key)}?rootline-test=${Date.now()}`, { cache: "no-store" })
-    if (!response.ok) throw new Error("测试文件已上传，但无法公开读取。请将 OSS 访问权限改为“公共读、私有写”，不要选择公共读写。")
-    if (response.headers.get("content-disposition")?.toLowerCase().includes("attachment")) throw new Error("OSS 当前启用了强制下载，请将响应处置设置为 inline 后重新测试连接。")
-    if ((await response.text()) !== content) throw new Error("OSS 测试文件读取结果不一致，请检查访问域名配置。")
+    if (!response.ok) throw new Error(t("errorOssPublicRead"))
+    if (response.headers.get("content-disposition")?.toLowerCase().includes("attachment")) throw new Error(t("errorOssForcedDownload"))
+    if ((await response.text()) !== content) throw new Error(t("errorOssReadMismatch"))
     return { ...config, verifiedAt: new Date().toISOString() }
   } catch (error) {
     operationError = error
@@ -111,7 +112,7 @@ export async function testAliyunOssConnection(config: AliyunOssConfig): Promise<
     try {
       await deleteOssObject(config, key)
     } catch (error) {
-      if (!operationError) throw new Error("测试文件已上传并可读取，但删除失败。请补充当前对象前缀的 DeleteObject 权限。", { cause: error })
+      if (!operationError) throw new Error(t("errorOssDeleteFailed"), { cause: error })
     }
   }
 }

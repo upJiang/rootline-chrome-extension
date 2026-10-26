@@ -41,7 +41,7 @@ host_permissions: https://*.myqcloud.com/*、https://*.aliyuncs.com/*
 
 ### `storage`
 
-> 使用 `chrome.storage.session` 保存最长 24 小时的活动采集会话和当前标签索引；使用 `chrome.storage.local` 保存浮动面板位置、录屏状态和用户主动配置的腾讯云 COS 或阿里云 OSS 凭证。凭证只保存在当前浏览器，不会发送给 Rootline，也不会写入报告。报告历史和本地媒体缓存保存在扩展 IndexedDB，不使用同步存储。远程配置在独立的扩展弹窗中编辑。
+> 使用 `chrome.storage.session` 保存最长 24 小时的活动采集会话和当前标签索引；使用 `chrome.storage.local` 保存浮动面板位置、录屏状态、界面语言偏好和用户主动配置的腾讯云 COS 或阿里云 OSS 凭证。凭证只保存在当前浏览器，不会发送给 Rootline，也不会写入报告。报告历史和本地媒体缓存保存在扩展 IndexedDB，不使用同步存储。远程配置在独立的扩展弹窗中编辑。
 
 ### `downloads`
 
