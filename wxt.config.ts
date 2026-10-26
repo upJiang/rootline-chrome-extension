@@ -44,7 +44,7 @@ export default defineConfig({
     short_name: "Rootline",
     description: "__MSG_extDescription__",
     default_locale: "zh_CN",
-    version: "0.1.2",
+    version: "0.1.4",
     minimum_chrome_version: "120",
     permissions: ["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads", "downloads.open"],
     host_permissions: ["https://*.myqcloud.com/*", "https://*.aliyuncs.com/*"],
