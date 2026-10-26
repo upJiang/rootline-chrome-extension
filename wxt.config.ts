@@ -40,15 +40,16 @@ export default defineConfig({
     ],
   },
   manifest: {
-    name: "Rootline",
+    name: "__MSG_extName__",
     short_name: "Rootline",
-    description: "Capture browser runtime evidence and export a local, Tencent COS, or Alibaba OSS debugging report.",
+    description: "__MSG_extDescription__",
+    default_locale: "zh_CN",
     version: "0.1.2",
     minimum_chrome_version: "120",
     permissions: ["activeTab", "alarms", "tabs", "scripting", "storage", "offscreen", "downloads", "downloads.open"],
     host_permissions: ["https://*.myqcloud.com/*", "https://*.aliyuncs.com/*"],
     action: {
-      default_title: "Rootline - 开始网页采集",
+      default_title: "__MSG_actionTitle__",
       default_popup: "popup.html",
       default_icon: {
         16: "icon/16.png",

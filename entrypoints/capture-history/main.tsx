@@ -7,10 +7,13 @@ import ReactDOM from "react-dom/client"
 import "../../styles/globals.css"
 import "../../styles/components.css"
 import "./style.css"
+import { LocaleProvider } from "../../components/LocaleToggle"
 import { HistoryApp } from "./HistoryApp"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <HistoryApp />
+    <LocaleProvider>
+      <HistoryApp />
+    </LocaleProvider>
   </React.StrictMode>,
 )

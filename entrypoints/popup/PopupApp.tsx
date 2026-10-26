@@ -18,7 +18,9 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "../../components/Brand"
+import { LocaleToggle, useI18n } from "../../components/LocaleToggle"
 import { Notice } from "../../components/Notice"
+import { providerName, t } from "../../src/lib/i18n"
 import type { ActiveState, ExtensionResponse } from "../../src/lib/messaging"
 import type { RootlineSession } from "../../src/lib/types"
 import { formatElapsedTime } from "../../src/lib/time"
@@ -30,7 +32,7 @@ const REMOTE_SETTINGS_TOOLBAR_OFFSET = 84
 const REMOTE_SETTINGS_EDGE_GAP = 14
 
 function hostLabel(value?: string): string {
-  if (!value) return "未选择页面"
+  if (!value) return t("popupNoPage")
   try {
     return new URL(value).hostname
   } catch {
@@ -40,7 +42,7 @@ function hostLabel(value?: string): string {
 
 async function request<T>(message: unknown): Promise<T> {
   const response = (await chrome.runtime.sendMessage(message)) as ExtensionResponse<T>
-  if (!response?.ok) throw new Error(response?.error ?? "Rootline 操作失败。")
+  if (!response?.ok) throw new Error(response?.error ?? t("commonOperationFailed"))
   return response.data as T
 }
 
@@ -82,6 +84,7 @@ async function remoteSettingsWindowPosition(): Promise<{ left?: number; top?: nu
 }
 
 export function PopupApp() {
+  const { locale } = useI18n()
   const [state, setState] = useState<ActiveState | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -100,7 +103,7 @@ export function PopupApp() {
       setState(withCompatibleDefaults(nextState))
       setError(null)
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "无法读取当前页面。")
+      setError(nextError instanceof Error ? nextError.message : t("popupReadFailed"))
     }
   }, [sourceTabId])
 
@@ -112,6 +115,10 @@ export function PopupApp() {
       if (successTimer.current !== null) window.clearTimeout(successTimer.current)
     }
   }, [refresh])
+
+  useEffect(() => {
+    document.title = t("popupDocumentTitle")
+  }, [locale])
 
   const showSuccess = (message: string) => {
     if (successTimer.current !== null) window.clearTimeout(successTimer.current)
@@ -129,7 +136,7 @@ export function PopupApp() {
       await operation()
       await refresh()
     } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : "Rootline 操作失败。"
+      const message = nextError instanceof Error ? nextError.message : t("commonOperationFailed")
       setError(message)
     } finally {
       setBusy(null)
@@ -155,7 +162,7 @@ export function PopupApp() {
       // this does not affect the capture overlay running in the source tab.
       window.close()
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "无法打开远程保存配置窗口。")
+      setError(nextError instanceof Error ? nextError.message : t("popupOpenSettingsFailed"))
     }
   }
 
@@ -170,7 +177,7 @@ export function PopupApp() {
   })
 
   const start = (captureMode: "screenshot" | "video") => run(captureMode === "video" ? "record" : "start", async () => {
-    if (typeof state?.tab?.id !== "number") throw new Error("无法确定当前标签页。")
+    if (typeof state?.tab?.id !== "number") throw new Error(t("popupUnknownTab"))
     const session = await request<RootlineSession>({
       type: "START_SESSION",
       tabId: state.tab.id,
@@ -188,7 +195,7 @@ export function PopupApp() {
   })
 
   const resume = () => run("resume", async () => {
-    if (typeof state?.tab?.id !== "number") throw new Error("无法确定当前标签页。")
+    if (typeof state?.tab?.id !== "number") throw new Error(t("popupUnknownTab"))
     await request<RootlineSession>({ type: "START_SESSION", tabId: state.tab.id })
     window.close()
   })
@@ -225,7 +232,7 @@ export function PopupApp() {
       await chrome.tabs.create({ url: reportUrl })
       window.close()
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "无法打开远程报告。")
+      setError(nextError instanceof Error ? nextError.message : t("popupOpenRemoteFailed"))
     }
   }
 
@@ -235,9 +242,9 @@ export function PopupApp() {
     setError(null)
     try {
       await copyText(reportUrl)
-      showSuccess("报告链接已复制，可直接粘贴到公司平台或浏览器打开。")
+      showSuccess(t("popupLinkCopied"))
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "报告链接复制失败。")
+      setError(nextError instanceof Error ? nextError.message : t("popupLinkCopyFailed"))
     }
   }
 
@@ -281,94 +288,95 @@ export function PopupApp() {
       <header className="popup-header">
         <Brand />
         <div className="popup-header__actions">
-          <button aria-label="打开采集历史" className="rl-button rl-icon-button popup-help" onClick={() => void openHistory()} title="采集历史" type="button">
+          <LocaleToggle />
+          <button aria-label={t("popupOpenHistory")} className="rl-button rl-icon-button popup-help" onClick={() => void openHistory()} title={t("popupHistoryTitle")} type="button">
             <History aria-hidden="true" size={17} />
           </button>
-          <button aria-label="打开使用说明" className="rl-button rl-icon-button popup-help" onClick={openInstructions} title="使用说明" type="button">
+          <button aria-label={t("popupOpenInstructions")} className="rl-button rl-icon-button popup-help" onClick={openInstructions} title={t("popupInstructionsTitle")} type="button">
             <BookOpen aria-hidden="true" size={17} />
           </button>
         </div>
       </header>
 
-      <section aria-label="当前页面" className="rl-card page-summary">
+      <section aria-label={t("popupCurrentPage")} className="rl-card page-summary">
         <div className="page-summary__top">
           <span className="rl-status-dot" data-status={state?.supported ? "active" : "error"} />
           <span className="rl-muted text-xs">{hostLabel(state?.tab?.url)}</span>
         </div>
-        <p className="page-summary__title">{state?.tab?.title ?? "正在读取当前页面…"}</p>
+        <p className="page-summary__title">{state?.tab?.title ?? t("popupReadingPage")}</p>
         <p className="rl-mono rl-muted page-summary__url">{state?.tab?.url ?? ""}</p>
       </section>
 
       {error ? <Notice title={error} tone="error" /> : null}
       {success ? <Notice title={success} tone="success" /> : null}
-      {!state?.supported && state?.unsupportedReason ? <Notice title="当前页面不可采集" tone="warning">{state.unsupportedReason}</Notice> : null}
+      {!state?.supported && state?.unsupportedReason ? <Notice title={t("popupUnsupported")} tone="warning">{state.unsupportedReason}</Notice> : null}
 
       {state?.recording && state.recording.tabId !== state.tab?.id ? (
         <section className="recording-away">
-          <div className="recording-away__status"><span className="capture-pulse" /><div><p>正在录制整个屏幕</p><span>{state.recording.pageTitle}</span></div><code>{formatElapsedTime(state.recording.startedAt)}</code></div>
-          <button className="rl-button w-full" onClick={() => void returnToRecordingPage()} type="button"><ArrowUpRight aria-hidden="true" size={17} />返回来源页</button>
-          <button className="rl-button rl-button--danger w-full" disabled={busy !== null} onClick={stopRecording} type="button"><CircleStop aria-hidden="true" size={17} />停止录屏</button>
+          <div className="recording-away__status"><span className="capture-pulse" /><div><p>{t("popupRecordingScreen")}</p><span>{state.recording.pageTitle}</span></div><code>{formatElapsedTime(state.recording.startedAt)}</code></div>
+          <button className="rl-button w-full" onClick={() => void returnToRecordingPage()} type="button"><ArrowUpRight aria-hidden="true" size={17} />{t("popupReturnToSource")}</button>
+          <button className="rl-button rl-button--danger w-full" disabled={busy !== null} onClick={stopRecording} type="button"><CircleStop aria-hidden="true" size={17} />{t("popupStopRecording")}</button>
         </section>
       ) : null}
 
       {state?.recording && state.recording.tabId !== state.tab?.id ? null : isCapturing && session ? (
-        <section aria-label="采集进度" className="capture-state">
+        <section aria-label={t("popupCaptureProgress")} className="capture-state">
           <div className="capture-state__heading">
             <div className="flex items-center gap-2">
               <span className="capture-pulse" />
               <div>
-                <p className="capture-state__title">{busy === "finish" ? "正在生成本次证据" : isRecording ? "正在录制整个屏幕" : isVideoCapture ? "录屏已停止" : "采集已开始"}</p>
-                <p className="capture-state__detail">{busy === "finish" ? "正在隐藏工具条、整理证据并生成截图" : isRecording ? "复现问题时可以继续选择和标注元素" : isVideoCapture ? "回到来源页确认后生成完整证据" : "正在等待你复现问题"}</p>
+                <p className="capture-state__title">{busy === "finish" ? t("popupGeneratingEvidence") : isRecording ? t("popupRecordingScreen") : isVideoCapture ? t("popupRecordingStopped") : t("popupCaptureStarted")}</p>
+                <p className="capture-state__detail">{busy === "finish" ? t("popupGeneratingDetail") : isRecording ? t("popupRecordingDetail") : isVideoCapture ? t("popupRecordingStoppedDetail") : t("popupWaitingDetail")}</p>
               </div>
             </div>
-            <span className="elapsed-time">已运行 {formatElapsedTime(session.startedAt)}</span>
+            <span className="elapsed-time">{t("popupElapsed", { time: formatElapsedTime(session.startedAt) })}</span>
           </div>
           <div className="evidence-grid">
-            <EvidenceMetric label="目标元素" value={session.targets} />
-            <EvidenceMetric label="控制台" value={session.consoleEvents} />
-            <EvidenceMetric label="错误" value={session.errors} {...(session.errors ? { tone: "error" as const } : {})} />
-            <EvidenceMetric label="网络请求" value={session.networkEvents} />
+            <EvidenceMetric label={t("popupMetricTargets")} value={session.targets} />
+            <EvidenceMetric label={t("popupMetricConsole")} value={session.consoleEvents} />
+            <EvidenceMetric label={t("popupMetricErrors")} value={session.errors} {...(session.errors ? { tone: "error" as const } : {})} />
+            <EvidenceMetric label={t("popupMetricNetwork")} value={session.networkEvents} />
           </div>
-          <p className="rl-muted m-0 text-xs leading-relaxed">采集没有固定等待时间。复现并标注完成后，即可结束并生成证据。</p>
+          <p className="rl-muted m-0 text-xs leading-relaxed">{t("popupNoFixedWait")}</p>
           {isRecording ? (
             <button className="rl-button rl-button--danger w-full" disabled={busy !== null} onClick={stopRecording} type="button">
               {busy === "stop-recording" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <CircleStop aria-hidden="true" size={17} />}
-              {busy === "stop-recording" ? "正在停止录屏" : "停止录屏"}
+              {busy === "stop-recording" ? t("popupStoppingRecording") : t("popupStopRecording")}
             </button>
           ) : null}
           <button className="rl-button w-full" disabled={busy !== null} onClick={resume} type="button">
             {busy === "resume" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Play aria-hidden="true" size={17} />}
-            回到页面继续复现
+            {t("popupBackToPage")}
           </button>
           <div className="grid grid-cols-2 gap-2">
             <button className="rl-button rl-button--accent" disabled={busy !== null} onClick={finish} type="button">
               {busy === "finish" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <CircleStop aria-hidden="true" size={17} />}
-              {busy === "finish" ? "正在生成证据" : "结束并生成证据"}
+              {busy === "finish" ? t("popupFinishing") : t("popupFinish")}
             </button>
             <button className="rl-button rl-button--danger" disabled={busy !== null} onClick={discard} type="button">
               <Trash2 aria-hidden="true" size={17} />
-              放弃采集
+              {t("popupDiscard")}
             </button>
           </div>
         </section>
       ) : canReview ? (
         <section className="capture-state">
-          <Notice title="本次证据已生成" tone="success">{session.remoteArtifacts ? `报告已上传到你的${session.remoteArtifacts.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}，可直接复制远程链接。` : "报告和标注截图已保存到本机，完整路径可在证据页查看。"}</Notice>
+          <Notice title={t("popupEvidenceReady")} tone="success">{session.remoteArtifacts ? t("popupRemoteReady", { provider: providerName(session.remoteArtifacts.provider) }) : t("popupLocalReady")}</Notice>
           <button className="rl-button rl-button--primary w-full" onClick={openReview} type="button">
             <ArrowUpRight aria-hidden="true" size={17} />
-            查看本次完整证据
+            {t("popupViewEvidence")}
           </button>
           <button className="rl-button w-full" disabled={busy !== null} onClick={reannotate} type="button">
             {busy === "reannotate" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <RotateCcw aria-hidden="true" size={17} />}
-            {busy === "reannotate" ? "正在连接页面" : "重新标注"}
+            {busy === "reannotate" ? t("popupConnecting") : t("popupReannotate")}
           </button>
           {session.remoteArtifacts ? (
             <div className="remote-review-actions">
               <button className="rl-button rl-button--primary" disabled={busy !== null} onClick={() => void openRemoteReport()} type="button">
-                <ExternalLink aria-hidden="true" size={17} />打开远程报告
+                <ExternalLink aria-hidden="true" size={17} />{t("popupOpenRemote")}
               </button>
               <button className="rl-button" disabled={busy !== null} onClick={() => void copyRemoteReportLink()} type="button">
-                <ClipboardCopy aria-hidden="true" size={17} />复制报告链接
+                <ClipboardCopy aria-hidden="true" size={17} />{t("popupCopyLink")}
               </button>
             </div>
           ) : null}
@@ -378,37 +386,37 @@ export function PopupApp() {
           <div className="capture-entry-actions">
             <button className="rl-button recording-start w-full" data-state={busy === "record" ? "loading" : undefined} disabled={!state?.supported || busy !== null} onClick={() => start("video")} type="button">
               {busy === "record" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Video aria-hidden="true" size={17} />}
-              {busy === "record" ? "正在请求屏幕权限" : "录制页面"}
+              {busy === "record" ? t("popupRequestingScreen") : t("popupRecordPage")}
             </button>
             <button className="rl-button rl-button--primary w-full" data-state={busy === "start" ? "loading" : undefined} disabled={!state?.supported || busy !== null} onClick={() => start("screenshot")} type="button">
               {busy === "start" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Camera aria-hidden="true" size={17} />}
-              {busy === "start" ? "正在连接当前页面" : "开始标注"}
+              {busy === "start" ? t("popupConnectingPage") : t("popupStartAnnotate")}
             </button>
           </div>
-          <div className="workflow-line" aria-label="采集流程">
+          <div className="workflow-line" aria-label={t("popupWorkflow")}>
             <Activity aria-hidden="true" size={16} />
-            <span>复现问题</span>
+            <span>{t("popupReproduce")}</span>
             <span aria-hidden="true">→</span>
-            <span>选择元素</span>
+            <span>{t("popupSelectElements")}</span>
             <span aria-hidden="true">→</span>
-            <span>导出上下文</span>
+            <span>{t("popupExportContext")}</span>
           </div>
         </section>
       )}
 
       <footer className="popup-footer save-mode-footer">
-        <div aria-label="证据保存模式" className="save-mode-tabs" role="tablist">
+        <div aria-label={t("popupSaveMode")} className="save-mode-tabs" role="tablist">
           <button aria-selected={(state?.saveConfig?.mode ?? "local") === "local"} disabled={isCapturing || busy !== null} onClick={() => void setSaveMode("local")} role="tab" type="button">
-            <HardDrive aria-hidden="true" size={15} />本地
+            <HardDrive aria-hidden="true" size={15} />{t("popupLocal")}
           </button>
           <button aria-selected={state?.saveConfig?.mode === "remote"} disabled={isCapturing || busy !== null} onClick={() => void setSaveMode("remote")} role="tab" type="button">
-            <Cloud aria-hidden="true" size={15} />远程
+            <Cloud aria-hidden="true" size={15} />{t("popupRemote")}
           </button>
         </div>
-        <button aria-label="配置远程保存" className="rl-button rl-icon-button save-settings" onClick={() => void openCosSettings()} title="远程保存设置" type="button">
+        <button aria-label={t("popupConfigureRemote")} className="rl-button rl-icon-button save-settings" onClick={() => void openCosSettings()} title={t("popupRemoteSettings")} type="button">
           <Settings2 aria-hidden="true" size={16} />
         </button>
-        <p>{state?.saveConfig?.mode === "remote" ? `${state.saveConfig.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"} · ${(state.saveConfig.provider === "aliyun-oss" ? state.saveConfig.aliyunOss?.bucket : state.saveConfig.tencentCos?.bucket ?? state.saveConfig.remote?.bucket) ?? "未配置"}` : "文件保存到浏览器下载目录 / Rootline"}</p>
+        <p>{state?.saveConfig?.mode === "remote" ? t("popupRemoteFooter", { provider: providerName(state.saveConfig.provider), bucket: (state.saveConfig.provider === "aliyun-oss" ? state.saveConfig.aliyunOss?.bucket : state.saveConfig.tencentCos?.bucket ?? state.saveConfig.remote?.bucket) ?? t("commonUnconfigured") }) : t("popupLocalFooter")}</p>
       </footer>
     </main>
   )

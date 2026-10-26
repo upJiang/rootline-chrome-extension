@@ -14,6 +14,13 @@
   background: var(--color-surface-subtle);
 }
 
+.instructions-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .instructions-kicker {
   margin: var(--space-8) 0 var(--space-2);
   color: var(--color-accent-ink);

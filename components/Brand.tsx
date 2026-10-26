@@ -1,4 +1,5 @@
 import { GitBranch } from "lucide-react"
+import { t } from "../src/lib/i18n"
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -8,7 +9,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       </span>
       <div className="min-w-0">
         <p className="m-0 text-base font-extrabold leading-tight">Rootline</p>
-        {!compact ? <p className="rl-muted m-0 truncate text-xs">Browser runtime capture</p> : null}
+        {!compact ? <p className="rl-muted m-0 truncate text-xs">{t("brandTagline")}</p> : null}
       </div>
     </div>
   )

@@ -7,10 +7,13 @@ import ReactDOM from "react-dom/client"
 import "../../styles/globals.css"
 import "../../styles/components.css"
 import "../diagnosis/style.css"
+import { LocaleProvider } from "../../components/LocaleToggle"
 import { DiagnosisApp } from "../diagnosis/DiagnosisApp"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <DiagnosisApp />
+    <LocaleProvider>
+      <DiagnosisApp />
+    </LocaleProvider>
   </React.StrictMode>,
 )

@@ -1,6 +1,6 @@
 # Rootline 隐私政策
 
-生效日期：2026 年 8 月 20 日
+生效日期：2026 年 10 月 26 日
 开发者：`Rootline 项目维护者`  
 联系邮箱：`junfengjiang1@gmail.com`  
 公开地址：`[发布后填写 HTTPS 隐私政策 URL]`
@@ -67,7 +67,7 @@ session_id
 ## 5. 存储位置和保留期限
 
 - 活动采集会话保存在 `chrome.storage.session`，更新时间超过 24 小时后会自动清理，并且不会作为云端历史同步。
-- 浮动面板位置和录屏进行中状态保存在 `chrome.storage.local`。
+- 浮动面板位置、录屏进行中状态和界面语言偏好保存在 `chrome.storage.local`。界面语言只影响扩展自己的界面文案。
 - 用户配置的 COS 或 OSS 凭证保存在 `chrome.storage.local`，仅用于直接上传到用户的对象存储，不会进入报告或发送给 Rootline。
 - 报告历史索引和标注截图缓存保存在扩展 IndexedDB，用于采集历史和完整证据页。
 - 录屏 Blob 和关键帧在成功写入本地文件或用户对象存储前暂存在扩展 IndexedDB；成功保存后对应临时录屏结果会清理。

@@ -1,5 +1,6 @@
 import { collectTarget, updateTargetRect } from "../src/lib/capture/dom"
-import type { ExtensionRequest, ExtensionResponse, RuntimePrepareFinishResponse, RuntimeSnapshotResponse, RuntimeStartResponse, TabRuntimeRequest } from "../src/lib/messaging"
+import { getLocale, isMessageKey, loadStoredLocale, providerName, setLocale, subscribeLocale, t, type MessageKey, type MessageVars } from "../src/lib/i18n"
+import type { ExtensionRequest, ExtensionResponse, RemoteSaveProgress, RuntimePrepareFinishResponse, RuntimeSnapshotResponse, RuntimeStartResponse, TabRuntimeRequest } from "../src/lib/messaging"
 import { redactUrl } from "../src/lib/redaction"
 import type {
   ConsoleEvidence,
@@ -72,6 +73,18 @@ interface EditorState {
   isNew: boolean
 }
 
+interface FeedbackReplay {
+  key: MessageKey
+  tone: "error" | "success" | "neutral"
+  vars?: MessageVars
+  targetLocked?: boolean
+}
+
+type FinishView =
+  | { kind: "preparing" }
+  | { kind: "show"; saveMode: CaptureSaveMode; provider?: RemoteProvider }
+  | { kind: "update"; progress: RemoteSaveProgress }
+
 interface BridgeState {
   sessionId: string | null
   startedAt: string | null
@@ -102,6 +115,8 @@ interface BridgeState {
   recordingState: RecordingSessionState | null
   recording: RecordingEvidence | null
   recordingTimer: number | null
+  feedbackReplay: FeedbackReplay | null
+  finishView: FinishView | null
 }
 
 const state: BridgeState = {
@@ -134,6 +149,8 @@ const state: BridgeState = {
   recordingState: null,
   recording: null,
   recordingTimer: null,
+  feedbackReplay: null,
+  finishView: null,
 }
 
 function pageInfo(): PageInfo {
@@ -160,7 +177,7 @@ function send(message: ExtensionRequest): void {
 
 async function request<T>(message: ExtensionRequest): Promise<T> {
   const response = await chrome.runtime.sendMessage(message) as ExtensionResponse<T>
-  if (!response?.ok) throw new Error(response?.error ?? "Rootline 操作失败。")
+  if (!response?.ok) throw new Error(response?.error ?? t("commonOperationFailed"))
   return response.data as T
 }
 
@@ -227,11 +244,14 @@ function runtimeElementLabel(element: Element): string {
 
 function targetLabel(target: RuntimeTarget): string {
   if (target.kind === "text-line") {
-    const text = target.text?.trim() || "未命名文字"
-    return `文字行 · ${text.length > 28 ? `${text.slice(0, 28)}...` : text}`
+    const text = target.text?.trim() || t("overlayUntitledText")
+    return t("overlayTextLineLabel", { text: text.length > 28 ? `${text.slice(0, 28)}...` : text })
   }
   if (target.kind === "spacing" && target.spacing) {
-    return `间距 · ${target.spacing.axis === "vertical" ? "垂直" : "水平"} ${Math.round(target.spacing.distance)}px`
+    return t("overlaySpacingLabel", {
+      axis: t(target.spacing.axis === "vertical" ? "overlayAxisVertical" : "overlayAxisHorizontal"),
+      distance: Math.round(target.spacing.distance),
+    })
   }
   return runtimeElementLabel(target.element)
 }
@@ -268,7 +288,7 @@ function positionTargetToolbar(target: RuntimeTarget): void {
   const parent = meaningfulParent(target)
   if (parentButton) {
     parentButton.disabled = !parent
-    parentButton.title = parent ? `选中父级组件：${targetLabel(parent)}` : "没有可选父级组件"
+    parentButton.title = parent ? t("overlaySelectParent", { label: targetLabel(parent) }) : t("overlayNoParent")
   }
 }
 
@@ -362,7 +382,7 @@ function setPendingTarget(target: RuntimeTarget): void {
   state.pendingTarget = target
   state.hoveredTarget = target
   renderHoverTarget()
-  setFeedback(`已锁定 ${targetLabel(target)}。`)
+  setMessage("overlayTargetLocked", "neutral", undefined, true)
   state.shadow?.querySelector<HTMLButtonElement>("[data-confirm-target]")?.focus()
 }
 
@@ -376,7 +396,7 @@ function promotePendingTargetToParent(): void {
 
 function reselectPendingTarget(): void {
   clearPendingTarget()
-  setFeedback("已取消当前目标。")
+  setMessage("overlayPendingCleared")
 }
 
 function selectedElementFromEvent(event: Event): Element | null {
@@ -521,6 +541,7 @@ function inspectReact(element: Element, targetId: string): Promise<ReactRuntimeH
 }
 
 function setFeedback(message: string, tone: "error" | "success" | "neutral" = "neutral"): void {
+  if (!message) state.feedbackReplay = null
   if (state.feedbackTimer !== null) window.clearTimeout(state.feedbackTimer)
   state.feedbackTimer = null
   const complete = state.shadow?.querySelector<HTMLElement>("[data-complete]")
@@ -536,8 +557,161 @@ function setFeedback(message: string, tone: "error" | "success" | "neutral" = "n
       feedback.textContent = ""
       feedback.hidden = true
       state.feedbackTimer = null
+      state.feedbackReplay = null
     }, 3_000)
   }
+}
+
+function setMessage(key: MessageKey, tone: "error" | "success" | "neutral" = "neutral", vars?: MessageVars, targetLocked = false): void {
+  state.feedbackReplay = {
+    key,
+    tone,
+    ...(vars ? { vars } : {}),
+    ...(targetLocked ? { targetLocked: true } : {}),
+  }
+  const resolved = targetLocked && state.pendingTarget ? { label: targetLabel(state.pendingTarget) } : vars
+  setFeedback(t(key, resolved), tone)
+}
+
+function setRawFeedback(message: string, tone: "error" | "success" | "neutral" = "neutral"): void {
+  state.feedbackReplay = null
+  setFeedback(message, tone)
+}
+
+function replayFeedback(): void {
+  const replay = state.feedbackReplay
+  if (!replay) return
+  const vars = replay.targetLocked && state.pendingTarget ? { label: targetLabel(state.pendingTarget) } : replay.vars
+  setFeedback(t(replay.key, vars), replay.tone)
+}
+
+function applyStaticI18n(): void {
+  const root = state.shadow
+  if (!root) return
+  root.querySelectorAll<HTMLElement>("[data-i18n]").forEach((node) => {
+    if (node.dataset.state === "loading") return
+    const key = node.dataset.i18n
+    if (key && isMessageKey(key)) node.textContent = t(key)
+  })
+  root.querySelectorAll<HTMLElement>("[data-i18n-aria]").forEach((node) => {
+    const key = node.dataset.i18nAria
+    if (key && isMessageKey(key)) node.setAttribute("aria-label", t(key))
+  })
+  root.querySelectorAll<HTMLTextAreaElement>("[data-i18n-placeholder]").forEach((node) => {
+    const key = node.dataset.i18nPlaceholder
+    if (key && isMessageKey(key)) node.placeholder = t(key)
+  })
+  root.querySelectorAll<HTMLElement>("[data-i18n-title]").forEach((node) => {
+    const key = node.dataset.i18nTitle
+    if (key && isMessageKey(key)) node.title = t(key)
+  })
+  const toggle = root.querySelector<HTMLElement>("[data-locale-toggle]")
+  if (toggle) toggle.setAttribute("aria-label", t("localeToggleLabel"))
+  root.querySelectorAll<HTMLButtonElement>("[data-locale]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.locale === getLocale()))
+  })
+}
+
+function progressDetailSuffix(progress: RemoteSaveProgress): string {
+  const percent = typeof progress.percent === "number"
+    ? Math.max(0, Math.min(100, Math.round(progress.percent * 100)))
+    : null
+  const size = typeof progress.totalBytes === "number" && progress.totalBytes > 0
+    ? formatProgressBytes(progress.totalBytes)
+    : ""
+  const details = [percent === null ? "" : `${percent}%`, size].filter(Boolean).join(" · ")
+  return details ? t("overlayProgressDetails", { details }) : ""
+}
+
+function applyFinishView(): void {
+  const view = state.finishView
+  const shadow = state.shadow
+  if (!view || !shadow) return
+  const progressText = shadow.querySelector<HTMLElement>("[data-finish-progress-text]")
+  const hint = shadow.querySelector<HTMLElement>("[data-panel-hint]")
+  const finish = shadow.querySelector<HTMLButtonElement>("[data-finish]")
+  if (view.kind === "preparing") {
+    if (finish) {
+      finish.disabled = true
+      finish.dataset.state = "loading"
+      finish.textContent = t("overlayFinishingCapture")
+    }
+    return
+  }
+  shadow.querySelectorAll<HTMLButtonElement>("[data-select], [data-mode], [data-undo], [data-clear], [data-cancel], [data-finish]")
+    .forEach((button) => { button.disabled = true })
+  if (view.kind === "show") {
+    const remote = view.saveMode === "remote"
+    const provider = providerName(view.provider)
+    if (progressText) progressText.textContent = remote ? t("overlayUploadingRemote", { provider }) : t("overlaySavingLocal")
+    if (hint) hint.textContent = remote ? t("overlayWaitingRemote", { provider }) : t("overlayWritingLocal")
+    if (finish) {
+      finish.dataset.state = "loading"
+      finish.textContent = remote ? t("overlayUploadingEvidence") : t("overlaySavingEvidence")
+    }
+    return
+  }
+  const details = progressDetailSuffix(view.progress)
+  const text = view.progress.stage === "rendering-capture"
+    ? t("overlayRenderingCapture")
+    : view.progress.stage === "uploading-recording"
+      ? t("overlayUploadingRecording", { details })
+      : view.progress.stage === "uploading-report"
+        ? t("overlayUploadingReport", { details })
+        : t("overlaySavingHistory")
+  if (progressText) progressText.textContent = text
+  if (hint) hint.textContent = text
+  if (finish) {
+    finish.dataset.state = "loading"
+    finish.textContent = view.progress.stage === "saving-history" ? t("overlayFinishing") : t("overlayUploadingEvidence")
+  }
+}
+
+function refreshEditorLabels(): void {
+  const remove = state.shadow?.querySelector<HTMLButtonElement>("[data-remove-annotation]")
+  if (remove && state.editor && remove.dataset.state !== "loading") {
+    remove.textContent = state.editor.isNew ? t("overlayCancelAnnotation") : t("overlayDeleteAnnotation")
+  }
+  const save = state.shadow?.querySelector<HTMLButtonElement>("[data-save-annotation]")
+  if (save?.dataset.state === "loading") save.textContent = t("overlaySaving")
+  const stop = state.shadow?.querySelector<HTMLButtonElement>("[data-stop-recording]")
+  if (stop?.dataset.state === "loading") stop.textContent = t("overlayStopping")
+}
+
+function fillComplete(session: RootlineSession, announce: boolean): void {
+  const summary = state.shadow?.querySelector<HTMLElement>("[data-complete-summary]")
+  if (summary) {
+    summary.textContent = t("overlaySummary", {
+      targets: session.targets.length,
+      console: session.console.length,
+      network: session.network.length,
+    })
+  }
+  const destination = session.remoteArtifacts?.reportUrl ?? session.localArtifacts?.directoryPath ?? t("overlayDownloadsFallback")
+  const location = state.shadow?.querySelector<HTMLElement>("[data-complete-location]")
+  const locationLabel = state.shadow?.querySelector<HTMLElement>("[data-complete-location-label]")
+  if (location) location.textContent = destination
+  if (locationLabel) locationLabel.textContent = session.remoteArtifacts ? t("overlayLocationRemote") : t("overlayLocationLocal")
+  const remoteActions = state.shadow?.querySelector<HTMLElement>("[data-remote-actions]")
+  remoteActions?.toggleAttribute("hidden", !session.remoteArtifacts)
+  remoteActions?.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    button.hidden = !session.remoteArtifacts
+  })
+  if (!announce) return
+  if (session.remoteArtifacts) setMessage("overlayUploaded", "success", { provider: providerName(session.remoteArtifacts.provider) })
+  else setMessage("overlaySavedTo", "success", { destination })
+}
+
+function refreshOverlayLocale(): void {
+  if (!state.shadow) return
+  applyStaticI18n()
+  syncToolbar()
+  syncMarkers()
+  refreshEditorLabels()
+  applyFinishView()
+  const complete = state.shadow.querySelector<HTMLElement>("[data-complete]")
+  if (complete && !complete.hidden && state.completedSession) fillComplete(state.completedSession, false)
+  replayFeedback()
 }
 
 function panelElement(): HTMLElement | null {
@@ -761,11 +935,11 @@ function syncToolbar(): void {
   if (selectButton) {
     const label = selectButton.querySelector<HTMLElement>("[data-select-label]")
     const detail = selectButton.querySelector<HTMLElement>("[data-select-detail]")
-    if (label) label.textContent = state.selectionEnabled ? "正在点选" : "开始标注"
-    if (detail) detail.textContent = state.selectionEnabled ? "点击页面上的问题位置" : "选择页面上的问题位置"
+    if (label) label.textContent = state.selectionEnabled ? t("overlaySelecting") : t("overlayStartAnnotate")
+    if (detail) detail.textContent = state.selectionEnabled ? t("overlayClickProblem") : t("overlayChooseProblem")
     selectButton.dataset.active = String(state.selectionEnabled)
     selectButton.setAttribute("aria-pressed", String(state.selectionEnabled))
-    selectButton.setAttribute("aria-label", state.selectionEnabled ? "结束标注" : "开始标注")
+    selectButton.setAttribute("aria-label", state.selectionEnabled ? t("overlayEndAnnotate") : t("overlayStartAnnotate"))
     selectButton.disabled = selectedCount >= MAX_TARGETS
   }
   state.shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
@@ -776,22 +950,21 @@ function syncToolbar(): void {
   const hint = state.shadow.querySelector<HTMLElement>("[data-panel-hint]")
   if (hint) {
     hint.textContent = state.selectionEnabled
-      ? state.selectionMode === "spacing"
-        ? "标间距模式：点击组件之间的空白或文字行；点击标注框填写预期和实际结果。"
-        : "控件模式：点击页面控件或元素；点击标注框填写预期和实际结果。"
-      : "点击“开始标注”后，在当前标签页选择需要说明的位置。"
+      ? t(state.selectionMode === "spacing" ? "overlayHintSpacing" : "overlayHintElement")
+      : t("overlayHintIdle")
   }
   const shortcutAction = state.shadow.querySelector<HTMLElement>("[data-shortcut-action]")
-  if (shortcutAction) shortcutAction.textContent = state.selectionEnabled ? "退出标注" : "开始标注"
+  if (shortcutAction) shortcutAction.textContent = state.selectionEnabled ? t("overlayExitAnnotate") : t("overlayStartAnnotate")
   if (undoButton) undoButton.disabled = selectedCount === 0
   if (clearButton) clearButton.disabled = selectedCount === 0
   if (finishButton) {
     finishButton.disabled = false
     finishButton.textContent = state.recordingState?.status === "recording"
-      ? "停止录屏并生成证据"
-      : "结束并生成证据"
+      ? t("overlayStopAndFinish")
+      : t("overlayFinish")
   }
   syncRecordingStatus()
+  if (state.finishView) applyFinishView()
 }
 
 function formatRecordingTime(durationMs: number): string {
@@ -818,7 +991,7 @@ function syncRecordingStatus(): void {
   const recordingState = state.recordingState
   const isVideo = Boolean(recordingState || state.recording)
   if (badge) {
-    badge.textContent = isVideo ? "录屏" : "截图"
+    badge.textContent = isVideo ? t("overlayRecording") : t("overlayScreenshot")
     badge.toggleAttribute("data-recording", isVideo)
   }
   if (!strip) return
@@ -831,12 +1004,12 @@ function syncRecordingStatus(): void {
   strip.dataset.status = status
   if (label) {
     label.textContent = status === "recording"
-      ? "正在录制整个屏幕"
+      ? t("overlayRecordingScreen")
       : status === "failed"
-        ? "录屏未能完成"
+        ? t("overlayRecordingFailed")
         : status === "starting"
-          ? "正在请求屏幕权限"
-          : "录屏已停止，可继续标注"
+          ? t("overlayRequestingScreen")
+          : t("overlayRecordingStopped")
   }
   if (time) {
     const startedAt = recordingState?.startedAt ?? state.recording?.startedAt
@@ -852,7 +1025,7 @@ function syncRecordingStatus(): void {
   if (status === "recording") {
     state.recordingTimer = window.setInterval(() => syncRecordingStatus(), 1_000)
   }
-  if (status === "failed" && recordingState?.error) setFeedback(recordingState.error, "error")
+  if (status === "failed" && recordingState?.error) setRawFeedback(recordingState.error, "error")
 }
 
 async function stopRecordingFromPage(): Promise<void> {
@@ -861,21 +1034,22 @@ async function stopRecordingFromPage(): Promise<void> {
   if (button) {
     button.disabled = true
     button.dataset.state = "loading"
-    button.textContent = "正在停止"
+    button.textContent = t("overlayStopping")
   }
   try {
     const session = await request<RootlineSession>({ type: "STOP_RECORDING", sessionId: state.sessionId })
     state.recordingState = session.recordingState ?? null
     state.recording = session.recording ?? null
     syncToolbar()
-    setFeedback("录屏已停止，可以继续标注或生成证据。", "success")
+    setMessage("overlayRecordingStoppedFeedback", "success")
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "停止录屏失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayStopRecordingFailed", "error")
   } finally {
     if (button) {
       button.disabled = false
       button.dataset.state = "default"
-      button.textContent = "停止"
+      button.textContent = t("overlayStop")
     }
   }
 }
@@ -919,8 +1093,8 @@ function syncMarkers(): void {
     edit.className = "target-index"
     edit.type = "button"
     edit.textContent = String(index + 1)
-    edit.title = `编辑标注 ${index + 1}`
-    edit.setAttribute("aria-label", `编辑标注 ${index + 1}`)
+    edit.title = t("overlayEditMarker", { index: index + 1 })
+    edit.setAttribute("aria-label", t("overlayEditMarker", { index: index + 1 }))
     const openEditor = () => showEditor(target, state.selectedElements.get(target.id) ?? null, false)
     edit.addEventListener("click", openEditor)
     box.addEventListener("click", openEditor)
@@ -995,7 +1169,7 @@ function showEditor(target: SelectedTarget, element: Element | null, isNew: bool
   delete expected.dataset.touched
   if (remove) {
     remove.hidden = false
-    remove.textContent = isNew ? "取消标注" : "删除标注"
+    remove.textContent = isNew ? t("overlayCancelAnnotation") : t("overlayDeleteAnnotation")
   }
   editor.hidden = false
   positionEditor(target)
@@ -1046,7 +1220,7 @@ async function saveEditor(): Promise<void> {
   if (save) {
     save.disabled = true
     save.dataset.state = "loading"
-    save.textContent = "正在保存"
+    save.textContent = t("overlaySaving")
   }
   try {
     await request({ type: "TARGET_SELECTED", sessionId: state.sessionId, target })
@@ -1054,13 +1228,14 @@ async function saveEditor(): Promise<void> {
     if (state.editor.element) state.selectedElements.set(target.id, state.editor.element)
     closeEditor(false)
     syncMarkers()
-    setFeedback(`标注 ${state.selectedTargets.size} 已更新，可继续选择。`, "success")
+    setMessage("overlayAnnotationUpdated", "success", { count: state.selectedTargets.size })
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "标注保存失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayAnnotationSaveFailed", "error")
   } finally {
     if (save) {
       save.dataset.state = "default"
-      save.textContent = "确定"
+      save.textContent = t("overlayConfirm")
     }
     validateEditor()
   }
@@ -1080,20 +1255,20 @@ function removeEditedTarget(): void {
   if (!editor) return
   removeTarget(editor.target.id)
   closeEditor()
-  setFeedback(editor.isNew ? "已取消本次标注。" : "标注已删除。")
+  setMessage(editor.isNew ? "overlayAnnotationCancelled" : "overlayAnnotationDeleted")
 }
 
 function undoLastTarget(): void {
   const targetId = Array.from(state.selectedTargets.keys()).at(-1)
   if (!targetId) return
   removeTarget(targetId)
-  setFeedback("已撤销上一条标注。")
+  setMessage("overlayUndone")
 }
 
 function clearTargets(): void {
   const ids = Array.from(state.selectedTargets.keys())
   ids.forEach(removeTarget)
-  setFeedback("已清空全部标注。")
+  setMessage("overlayCleared")
 }
 
 function runtimeTargetOptions(target: RuntimeTarget): Parameters<typeof collectTarget>[3] {
@@ -1129,7 +1304,7 @@ async function selectRuntimeTarget(runtimeTarget: RuntimeTarget): Promise<void> 
   syncMarkers()
   syncToolbar()
   showEditor(target, runtimeTarget.element, true)
-  setFeedback(`已添加标注 ${state.selectedTargets.size}，说明可稍后补充。`, "success")
+  setMessage("overlayAnnotationAdded", "success", { count: state.selectedTargets.size })
   try {
     await request({ type: "TARGET_SELECTED", sessionId, target })
     const hint = await inspectReact(runtimeTarget.element, targetId)
@@ -1143,7 +1318,8 @@ async function selectRuntimeTarget(runtimeTarget: RuntimeTarget): Promise<void> 
     removeTarget(target.id)
     const editorState = state.editor as EditorState | null
     if (editorState?.target.id === target.id) closeEditor()
-    setFeedback(error instanceof Error ? error.message : "标注保存失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayAnnotationSaveFailed", "error")
   }
 }
 
@@ -1269,9 +1445,10 @@ async function copyReportLink(): Promise<void> {
   setFeedback("")
   try {
     await copyText(reportUrl)
-    setFeedback("报告链接已复制，可直接粘贴到公司平台或浏览器打开。", "success")
+    setMessage("overlayLinkCopied", "success")
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "报告链接复制失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayLinkCopyFailed", "error")
   } finally {
     setCompletionBusy(null)
   }
@@ -1285,7 +1462,8 @@ async function openRemoteReport(): Promise<void> {
     await request({ type: "OPEN_REMOTE_REPORT_FROM_PAGE", sessionId: state.sessionId })
     cleanup()
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "远程报告打开失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayRemoteOpenFailed", "error")
   } finally {
     setCompletionBusy(null)
   }
@@ -1298,9 +1476,10 @@ async function copyContext(): Promise<void> {
   try {
     const markdown = await request<string>({ type: "GET_AI_CONTEXT_FROM_PAGE", sessionId: state.sessionId })
     await copyText(markdown)
-    setFeedback("AI 上下文已复制，可直接粘贴到 Codex、Claude 或 Cursor。", "success")
+    setMessage("overlayContextCopied", "success")
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "复制失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("commonCopyFailed", "error")
   } finally {
     setCompletionBusy(null)
   }
@@ -1315,9 +1494,10 @@ async function exportReport(): Promise<void> {
       type: "EXPORT_FROM_PAGE",
       sessionId: state.sessionId,
     })
-    setFeedback(`报告已重新导出到 ${result.directory}。`, "success")
+    setMessage("overlayExported", "success", { directory: result.directory })
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "重新导出失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayExportFailed", "error")
   } finally {
     setCompletionBusy(null)
   }
@@ -1331,7 +1511,8 @@ async function openReview(): Promise<void> {
     await request({ type: "OPEN_REVIEW_FROM_PAGE", sessionId: state.sessionId })
     cleanup()
   } catch (error) {
-    setFeedback(error instanceof Error ? error.message : "完整证据打开失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayReviewFailed", "error")
     setCompletionBusy(null)
   }
 }
@@ -1355,7 +1536,8 @@ async function reannotate(): Promise<void> {
     await request<RootlineSession>({ type: "REANNOTATE_SESSION", sessionId: state.sessionId })
   } catch (error) {
     if (previous) showComplete(previous)
-    setFeedback(error instanceof Error ? error.message : "重新标注失败。", "error")
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayReannotateFailed", "error")
     setCompletionBusy(null)
   }
 }
@@ -1367,7 +1549,8 @@ async function finishFromPage(): Promise<void> {
   if (finish) {
     finish.disabled = true
     finish.dataset.state = "loading"
-    finish.textContent = "正在整理证据并生成截图"
+    finish.textContent = t("overlayFinishingCapture")
+    state.finishView = { kind: "preparing" }
   }
   setFeedback("")
   try {
@@ -1377,11 +1560,13 @@ async function finishFromPage(): Promise<void> {
       state.host.style.display = "block"
       state.host.style.visibility = "visible"
     }
-    setFeedback(error instanceof Error ? error.message : "采集完成失败。", "error")
+    state.finishView = null
+    if (error instanceof Error) setRawFeedback(error.message, "error")
+    else setMessage("overlayFinishFailed", "error")
     if (finish) {
       finish.disabled = false
       finish.dataset.state = "default"
-      finish.textContent = "结束并生成证据"
+      finish.textContent = t("overlayFinish")
     }
   }
 }
@@ -1418,6 +1603,7 @@ function abortFinish(): void {
   state.shadow?.querySelector<HTMLElement>("[data-target-layer]")?.removeAttribute("hidden")
   const progress = state.shadow?.querySelector<HTMLElement>("[data-finish-progress]")
   if (progress) progress.hidden = true
+  state.finishView = null
   syncToolbar()
   syncMarkers()
 }
@@ -1434,25 +1620,9 @@ function showFinishProgress(saveMode: CaptureSaveMode, provider?: RemoteProvider
   shadow.querySelector<HTMLElement>("[data-workflow]")?.removeAttribute("hidden")
   shadow.querySelector<HTMLElement>("[data-complete]")?.setAttribute("hidden", "")
   const progress = shadow.querySelector<HTMLElement>("[data-finish-progress]")
-  const progressText = shadow.querySelector<HTMLElement>("[data-finish-progress-text]")
-  const remoteName = provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"
-  if (progressText) {
-    progressText.textContent = saveMode === "remote"
-      ? `截图已生成，正在上传到${remoteName}…`
-      : "截图已生成，正在保存到浏览器下载目录…"
-  }
   if (progress) progress.hidden = false
-  const hint = shadow.querySelector<HTMLElement>("[data-panel-hint]")
-  if (hint) hint.textContent = saveMode === "remote"
-    ? `截图已完成，正在等待${remoteName}返回结果。`
-    : "截图已完成，正在写入本机文件。"
-  shadow.querySelectorAll<HTMLButtonElement>("[data-select], [data-mode], [data-undo], [data-clear], [data-cancel], [data-finish]")
-    .forEach((button) => { button.disabled = true })
-  const finish = shadow.querySelector<HTMLButtonElement>("[data-finish]")
-  if (finish) {
-    finish.dataset.state = "loading"
-    finish.textContent = saveMode === "remote" ? "正在上传证据" : "正在保存证据"
-  }
+  state.finishView = provider ? { kind: "show", saveMode, provider } : { kind: "show", saveMode }
+  applyFinishView()
 }
 
 function formatProgressBytes(value: number): string {
@@ -1461,27 +1631,9 @@ function formatProgressBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function updateFinishProgress(progress: import("../src/lib/messaging").RemoteSaveProgress): void {
-  const progressText = state.shadow?.querySelector<HTMLElement>("[data-finish-progress-text]")
-  const hint = state.shadow?.querySelector<HTMLElement>("[data-panel-hint]")
-  const finish = state.shadow?.querySelector<HTMLButtonElement>("[data-finish]")
-  const percent = typeof progress.percent === "number"
-    ? Math.max(0, Math.min(100, Math.round(progress.percent * 100)))
-    : null
-  const size = typeof progress.totalBytes === "number" && progress.totalBytes > 0
-    ? formatProgressBytes(progress.totalBytes)
-    : ""
-  const details = [percent === null ? "" : `${percent}%`, size].filter(Boolean).join(" · ")
-  const text = progress.stage === "rendering-capture"
-    ? "正在生成轻量标注截图…"
-    : progress.stage === "uploading-recording"
-      ? `正在上传录屏${details ? ` · ${details}` : ""}`
-      : progress.stage === "uploading-report"
-        ? `正在上传远程报告${details ? ` · ${details}` : ""}`
-        : "远程文件已上传，正在保存采集历史…"
-  if (progressText) progressText.textContent = text
-  if (hint) hint.textContent = text
-  if (finish) finish.textContent = progress.stage === "saving-history" ? "正在完成采集" : "正在上传证据"
+function updateFinishProgress(progress: RemoteSaveProgress): void {
+  state.finishView = { kind: "update", progress }
+  applyFinishView()
 }
 
 function commitFinish(): void {
@@ -1491,6 +1643,7 @@ function commitFinish(): void {
   state.heartbeatTimer = null
   if (state.sessionId) window.postMessage({ source: BRIDGE_SOURCE, type: "cleanup", sessionId: state.sessionId }, "*")
   state.finishPrepared = false
+  state.finishView = null
   if (state.host) state.host.style.display = "none"
 }
 
@@ -1514,19 +1667,8 @@ function showComplete(session: RootlineSession): void {
   if (complete) complete.hidden = false
   const progress = state.shadow?.querySelector<HTMLElement>("[data-finish-progress]")
   if (progress) progress.hidden = true
-  const summary = state.shadow?.querySelector<HTMLElement>("[data-complete-summary]")
-  if (summary) summary.textContent = `${session.targets.length} 个元素 · ${session.console.length} 条控制台 · ${session.network.length} 条网络`
-  const location = state.shadow?.querySelector<HTMLElement>("[data-complete-location]")
-  const destination = session.remoteArtifacts?.reportUrl ?? session.localArtifacts?.directoryPath ?? "Chrome 下载目录/Rootline"
-  const locationLabel = state.shadow?.querySelector<HTMLElement>("[data-complete-location-label]")
-  if (location) location.textContent = destination
-  if (locationLabel) locationLabel.textContent = session.remoteArtifacts ? "远程报告链接" : "文件保存位置"
-  const remoteActions = state.shadow?.querySelector<HTMLElement>("[data-remote-actions]")
-  remoteActions?.toggleAttribute("hidden", !session.remoteArtifacts)
-  remoteActions?.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
-    button.hidden = !session.remoteArtifacts
-  })
-  setFeedback(session.remoteArtifacts ? `本次证据已上传到你的${session.remoteArtifacts.provider === "aliyun-oss" ? "阿里云 OSS" : "腾讯云 COS"}。` : `本次证据已保存到 ${destination}。`, "success")
+  state.finishView = null
+  fillComplete(session, true)
   state.shadow?.querySelector<HTMLButtonElement>("[data-open-review]")?.focus()
 }
 
@@ -1607,6 +1749,11 @@ function createOverlay(): void {
       .hint { margin: 4px 0 0; color: #475569; font-size: 11px; line-height: 1.45; }
       .mode-badge { display: inline-flex; align-items: center; flex: 0 0 auto; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--rl-ink); color: #fff; font-size: 11px; font-weight: 700; }
       .mode-badge[data-recording] { background: var(--rl-error); }
+      .header-tools { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+      .locale-toggle { display: inline-grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 32px; border: 1px solid var(--rl-rule-strong); border-radius: 8px; padding: 2px; background: var(--rl-paper-soft); pointer-events: auto; }
+      .locale-toggle button { min-width: 32px; min-height: 26px; border: 0; border-radius: 6px; background: transparent; color: var(--rl-muted); font-size: 11px; font-weight: 800; cursor: pointer; }
+      .locale-toggle button[aria-pressed="true"] { background: var(--rl-paper); color: var(--rl-ink); box-shadow: 0 1px 2px rgba(15, 23, 42, .12); }
+      .locale-toggle button:hover { color: var(--rl-accent); }
       .recording-strip { display: grid; grid-template-columns: 10px minmax(0,1fr) auto auto; align-items: center; gap: 8px; min-height: 44px; border: 1px solid rgba(180,35,24,.2); border-radius: 11px; padding: 5px 6px 5px 10px; background: var(--rl-error-soft); color: var(--rl-error); }
       .recording-strip[data-status="stopped"] { border-color: var(--rl-rule); background: var(--rl-paper-soft); color: var(--rl-copy); }
       .recording-strip[data-status="failed"] { border-color: rgba(180,35,24,.34); }
@@ -1694,52 +1841,66 @@ function createOverlay(): void {
     <div class="highlight" data-highlight></div>
     <div class="hover-label" data-hover-label hidden></div>
     <div data-target-layer></div>
-    <div aria-label="确认当前元素" class="pending-toolbar" data-pending-toolbar role="toolbar" hidden>
-      <button data-select-parent type="button">父级</button>
-      <button class="confirm-target" data-confirm-target type="button">标注</button>
-      <button data-reselect-target type="button">重选</button>
+    <div aria-label="${t("overlayPendingToolbar")}" class="pending-toolbar" data-i18n-aria="overlayPendingToolbar" data-pending-toolbar role="toolbar" hidden>
+      <button data-i18n="overlayParent" data-select-parent type="button">${t("overlayParent")}</button>
+      <button class="confirm-target" data-confirm-target data-i18n="overlayAnnotate" type="button">${t("overlayAnnotate")}</button>
+      <button data-i18n="overlayReselect" data-reselect-target type="button">${t("overlayReselect")}</button>
     </div>
-    <section aria-label="Rootline 页面采集工具" class="panel" data-panel data-workflow>
+    <section aria-label="${t("overlayPanelAria")}" class="panel" data-i18n-aria="overlayPanelAria" data-panel data-workflow>
       <header class="panel-header" data-panel-drag-handle>
-        <div class="title-wrap"><p class="title">标注区域</p><p class="hint" data-panel-hint></p></div>
-        <span class="mode-badge" data-capture-mode>截图</span>
+        <div class="title-wrap"><p class="title" data-i18n="overlayPanelTitle">${t("overlayPanelTitle")}</p><p class="hint" data-panel-hint></p></div>
+        <div class="header-tools">
+          <div aria-label="${t("localeToggleLabel")}" class="locale-toggle" data-locale-toggle role="group">
+            <button aria-pressed="${getLocale() === "zh_CN"}" data-locale="zh_CN" type="button">中</button>
+            <button aria-pressed="${getLocale() === "en"}" data-locale="en" type="button">EN</button>
+          </div>
+          <span class="mode-badge" data-capture-mode data-i18n="overlayScreenshot">${t("overlayScreenshot")}</span>
+        </div>
       </header>
-      <div aria-live="polite" class="recording-strip" data-recording-strip hidden><span aria-hidden="true" class="recording-dot"></span><span class="recording-label" data-recording-label></span><code class="recording-time" data-recording-time>00:00</code><button class="recording-stop" data-stop-recording type="button">停止</button></div>
+      <div aria-live="polite" class="recording-strip" data-recording-strip hidden><span aria-hidden="true" class="recording-dot"></span><span class="recording-label" data-recording-label></span><code class="recording-time" data-recording-time>00:00</code><button class="recording-stop" data-i18n="overlayStop" data-stop-recording type="button">${t("overlayStop")}</button></div>
       <button class="select-button" data-select type="button">
-        <span class="select-copy"><span class="select-label" data-select-label>开始标注</span><span class="select-detail" data-select-detail>选择页面上的问题位置</span></span>
+        <span class="select-copy"><span class="select-label" data-i18n="overlayStartAnnotate" data-select-label>${t("overlayStartAnnotate")}</span><span class="select-detail" data-i18n="overlayChooseProblem" data-select-detail>${t("overlayChooseProblem")}</span></span>
       </button>
-      <div class="shortcut" aria-label="按 A 开始标注"><span class="shortcut-key">A</span><span>快捷键</span><span class="shortcut-action" data-shortcut-action>开始标注</span></div>
-      <div class="selection-modes" role="group" aria-label="标注模式">
-        <button class="mode-button" data-mode="element" type="button"><span class="mode-label">控件</span><span class="mode-detail">按钮、表单和页面元素</span></button>
-        <button class="mode-button" data-mode="spacing" type="button"><span class="mode-label">间距</span><span class="mode-detail">空白距离和文字行</span></button>
+      <div class="shortcut" aria-label="${t("overlayShortcutAria")}" data-i18n-aria="overlayShortcutAria"><span class="shortcut-key">A</span><span data-i18n="overlayShortcut">${t("overlayShortcut")}</span><span class="shortcut-action" data-i18n="overlayStartAnnotate" data-shortcut-action>${t("overlayStartAnnotate")}</span></div>
+      <div class="selection-modes" role="group" aria-label="${t("overlayModesAria")}" data-i18n-aria="overlayModesAria">
+        <button class="mode-button" data-mode="element" type="button"><span class="mode-label" data-i18n="overlayModeElement">${t("overlayModeElement")}</span><span class="mode-detail" data-i18n="overlayModeElementDetail">${t("overlayModeElementDetail")}</span></button>
+        <button class="mode-button" data-mode="spacing" type="button"><span class="mode-label" data-i18n="overlayModeSpacing">${t("overlayModeSpacing")}</span><span class="mode-detail" data-i18n="overlayModeSpacingDetail">${t("overlayModeSpacingDetail")}</span></button>
       </div>
-      <div class="count-wrap"><span>已标注</span><span class="count"><span data-count>0</span> / ${MAX_TARGETS}</span></div>
+      <div class="count-wrap"><span data-i18n="overlayMarked">${t("overlayMarked")}</span><span class="count"><span data-count>0</span> / ${MAX_TARGETS}</span></div>
       <div class="tools">
-        <button class="tool-button" data-undo type="button">撤销</button>
-        <button class="tool-button" data-clear type="button">清空</button>
-        <button class="tool-button" data-cancel type="button">取消</button>
+        <button class="tool-button" data-i18n="overlayUndo" data-undo type="button">${t("overlayUndo")}</button>
+        <button class="tool-button" data-clear data-i18n="overlayClear" type="button">${t("overlayClear")}</button>
+        <button class="tool-button" data-cancel data-i18n="overlayCancel" type="button">${t("overlayCancel")}</button>
       </div>
       <div aria-live="polite" class="finish-progress" data-finish-progress hidden><span data-finish-progress-text></span></div>
-      <button class="finish-button" data-finish type="button">完成并截图</button>
+      <button class="finish-button" data-finish data-i18n="overlayFinish" type="button">${t("overlayFinish")}</button>
     </section>
-    <section aria-label="元素问题标注" class="editor" data-editor hidden>
-      <label class="field"><span class="field-head"><span>预期结果</span><span class="field-count" data-expected-count>0/${ISSUE_TEXT_MAX_LENGTH}</span></span><textarea data-expected maxlength="${ISSUE_TEXT_MAX_LENGTH}" placeholder="这个位置本来应该怎样表现？"></textarea></label>
-      <label class="field"><span class="field-head"><span>实际结果</span><span class="field-count" data-actual-count>0/${ISSUE_TEXT_MAX_LENGTH}</span></span><textarea data-actual maxlength="${ISSUE_TEXT_MAX_LENGTH}" placeholder="页面上实际发生了什么？"></textarea></label>
-      <div class="editor-actions"><button class="danger" data-remove-annotation type="button">删除标注</button><button class="confirm" data-save-annotation type="button">确定</button></div>
+    <section aria-label="${t("overlayEditorAria")}" class="editor" data-editor data-i18n-aria="overlayEditorAria" hidden>
+      <label class="field"><span class="field-head"><span data-i18n="overlayExpected">${t("overlayExpected")}</span><span class="field-count" data-expected-count>0/${ISSUE_TEXT_MAX_LENGTH}</span></span><textarea data-expected data-i18n-placeholder="overlayExpectedPlaceholder" maxlength="${ISSUE_TEXT_MAX_LENGTH}" placeholder="${t("overlayExpectedPlaceholder")}"></textarea></label>
+      <label class="field"><span class="field-head"><span data-i18n="overlayActual">${t("overlayActual")}</span><span class="field-count" data-actual-count>0/${ISSUE_TEXT_MAX_LENGTH}</span></span><textarea data-actual data-i18n-placeholder="overlayActualPlaceholder" maxlength="${ISSUE_TEXT_MAX_LENGTH}" placeholder="${t("overlayActualPlaceholder")}"></textarea></label>
+      <div class="editor-actions"><button class="danger" data-i18n="overlayDeleteAnnotation" data-remove-annotation type="button">${t("overlayDeleteAnnotation")}</button><button class="confirm" data-i18n="overlayConfirm" data-save-annotation type="button">${t("overlayConfirm")}</button></div>
     </section>
-    <section aria-label="采集完成" class="complete" data-complete hidden>
-      <div class="complete-head"><div><p class="eyebrow">采集完成</p><h2 class="complete-title">本次证据已生成</h2></div><button aria-label="关闭采集完成提示" class="complete-close" data-close-complete title="关闭" type="button">&times;</button></div>
+    <section aria-label="${t("overlayCompleteAria")}" class="complete" data-complete data-i18n-aria="overlayCompleteAria" hidden>
+      <div class="complete-head"><div><p class="eyebrow" data-i18n="overlayCompleteEyebrow">${t("overlayCompleteEyebrow")}</p><h2 class="complete-title" data-i18n="overlayCompleteTitle">${t("overlayCompleteTitle")}</h2></div><button aria-label="${t("overlayCloseComplete")}" class="complete-close" data-close-complete data-i18n-aria="overlayCloseComplete" data-i18n-title="commonClose" title="${t("commonClose")}" type="button">&times;</button></div>
       <p class="complete-summary" data-complete-summary></p>
-      <p class="complete-location"><span data-complete-location-label>文件保存位置</span><code data-complete-location>Chrome 下载目录/Rootline</code></p>
+      <p class="complete-location"><span data-complete-location-label data-i18n="overlayLocationLocal">${t("overlayLocationLocal")}</span><code data-complete-location>${t("overlayDownloadsFallback")}</code></p>
       <div aria-live="polite" class="feedback" data-complete-feedback hidden></div>
-      <div class="complete-actions"><button class="primary" data-action="review" data-complete-action data-open-review type="button">查看本次完整证据</button><button data-action="reannotate" data-complete-action data-reannotate type="button">重新标注</button><button data-action="copy" data-complete-action data-copy-context type="button">复制 AI 上下文</button><button data-action="export" data-complete-action data-export-report type="button">重新导出报告</button></div>
-      <div class="remote-actions" data-remote-actions hidden><button class="primary" data-action="open-remote" data-remote-action data-open-remote-report hidden type="button">打开远程报告</button><button data-action="copy-link" data-remote-action data-copy-report-link hidden type="button">复制报告链接</button></div>
+      <div class="complete-actions"><button class="primary" data-action="review" data-complete-action data-i18n="overlayViewEvidence" data-open-review type="button">${t("overlayViewEvidence")}</button><button data-action="reannotate" data-complete-action data-i18n="overlayReannotate" data-reannotate type="button">${t("overlayReannotate")}</button><button data-action="copy" data-complete-action data-copy-context data-i18n="overlayCopyContext" type="button">${t("overlayCopyContext")}</button><button data-action="export" data-complete-action data-export-report data-i18n="overlayExportAgain" type="button">${t("overlayExportAgain")}</button></div>
+      <div class="remote-actions" data-remote-actions hidden><button class="primary" data-action="open-remote" data-i18n="overlayOpenRemote" data-open-remote-report data-remote-action hidden type="button">${t("overlayOpenRemote")}</button><button data-action="copy-link" data-copy-report-link data-i18n="overlayCopyLink" data-remote-action hidden type="button">${t("overlayCopyLink")}</button></div>
     </section>
     <div aria-live="polite" class="feedback workflow-feedback" data-workflow-feedback hidden></div>`
   document.documentElement.append(host)
   state.host = host
   state.shadow = shadow
   state.highlight = shadow.querySelector("[data-highlight]")
+  const localeToggle = shadow.querySelector<HTMLElement>("[data-locale-toggle]")
+  localeToggle?.addEventListener("pointerdown", (event) => event.stopPropagation())
+  shadow.querySelectorAll<HTMLButtonElement>("[data-locale]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const locale = button.dataset.locale
+      if (locale === "zh_CN" || locale === "en") void setLocale(locale)
+    })
+  })
   shadow.querySelector("[data-select]")?.addEventListener("click", () => setSelection(!state.selectionEnabled))
   shadow.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => setSelectionMode(button.dataset.mode === "spacing" ? "spacing" : "element"))
@@ -1818,6 +1979,8 @@ function cleanup(): void {
   state.finishPrepared = false
   state.recordingState = null
   state.recording = null
+  state.feedbackReplay = null
+  state.finishView = null
   if (state.sessionId) window.postMessage({ source: BRIDGE_SOURCE, type: "cleanup", sessionId: state.sessionId }, "*")
   state.sessionId = null
   state.startedAt = null
@@ -1885,9 +2048,16 @@ function snapshot(): RuntimeSnapshotResponse {
   return { ok: true, page: pageInfo(), resources: resourceEvidence(), targets }
 }
 
+let localeWatchInstalled = false
+
 function installBridge(): void {
   if (globalThis.__ROOTLINE_BRIDGE_INSTALLED__) return
   globalThis.__ROOTLINE_BRIDGE_INSTALLED__ = true
+  if (!localeWatchInstalled) {
+    localeWatchInstalled = true
+    subscribeLocale(() => refreshOverlayLocale())
+    void loadStoredLocale()
+  }
   window.addEventListener("message", (event) => {
     if (
       event.source !== window ||
